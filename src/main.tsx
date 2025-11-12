@@ -9,8 +9,10 @@ import CreateAccountPage from '@pages/CreateAccountPage'
 import ProductDetailPage from '@pages/ProductDetailPage'
 import StorefrontPage from '@pages/StorefrontPage'
 import CartPage from '@pages/CartPage'
+import CheckoutPage from '@pages/CheckoutPage'
 import ProfilePage from '@pages/ProfilePage'
 import { AuthProvider } from '@context/AuthContext'
+import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
 
 const router = createBrowserRouter([
@@ -24,6 +26,7 @@ const router = createBrowserRouter([
       { path: 'product/:id', element: <ProductDetailPage /> },
       { path: 'storefront/:storeId', element: <StorefrontPage /> },
       { path: 'cart', element: <CartPage /> },
+      { path: 'checkout', element: <CheckoutPage /> },
       { path: 'profile', element: <ProfilePage /> },
     ],
   },
@@ -32,9 +35,11 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
-      <CartProvider>
-        <RouterProvider router={router} />
-      </CartProvider>
+      <ToastProvider>
+        <CartProvider>
+          <RouterProvider router={router} />
+        </CartProvider>
+      </ToastProvider>
     </AuthProvider>
   </React.StrictMode>,
 )

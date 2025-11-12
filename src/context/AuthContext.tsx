@@ -28,6 +28,17 @@ type Props = {
     children: ReactNode
 }
 
+// Mock user for development (when backend auth is not available)
+const MOCK_USER: User = {
+    userId: 'mock-user-123',
+    email: 'dev@faasify.com',
+    name: 'Dev User',
+    role: 'buyer',
+    createdAt: new Date().toISOString(),
+}
+
+const MOCK_TOKEN = 'mock-dev-token'
+
 export const AuthProvider = ({ children }: Props) => {
     const [user, setUser] = useState<User | null>(null)
     const [token, setToken] = useState<string | null>(null)
@@ -41,11 +52,29 @@ export const AuthProvider = ({ children }: Props) => {
             // Try to fetch user profile
             fetchProfile(storedToken)
         } else {
+            // Development mode: Auto-login with mock user if no token exists
+            // This allows testing UI without backend authentication
+            if (import.meta.env.DEV) {
+                const useMockAuth = localStorage.getItem('useMockAuth') !== 'false' // Default to true in dev
+                if (useMockAuth) {
+                    setUser(MOCK_USER)
+                    setToken(MOCK_TOKEN)
+                    localStorage.setItem('authToken', MOCK_TOKEN)
+                    console.log('🔧 Development mode: Using mock authentication')
+                }
+            }
             setIsLoading(false)
         }
     }, [])
 
     const fetchProfile = async (authToken: string) => {
+        // Skip API call for mock token in development
+        if (authToken === MOCK_TOKEN) {
+            setUser(MOCK_USER)
+            setIsLoading(false)
+            return
+        }
+
         try {
             // We'll need to update apiGet to include auth headers
             const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/profile`, {
@@ -64,8 +93,15 @@ export const AuthProvider = ({ children }: Props) => {
             }
         } catch (error) {
             console.error('Error fetching profile:', error)
-            localStorage.removeItem('authToken')
-            setToken(null)
+            // In dev mode, if API fails, fall back to mock user
+            if (import.meta.env.DEV) {
+                console.log('🔧 Development mode: API unavailable, using mock authentication')
+                setUser(MOCK_USER)
+                setToken(MOCK_TOKEN)
+            } else {
+                localStorage.removeItem('authToken')
+                setToken(null)
+            }
         } finally {
             setIsLoading(false)
         }
