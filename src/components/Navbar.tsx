@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom'
 import { ShoppingCart } from 'lucide-react'
 import { useCart } from '@hooks/useCart'
+import { useAuth } from '@context/AuthContext'
 
 const navItems = [
   { label: 'Home', to: '/' },
@@ -10,6 +11,7 @@ const navItems = [
 
 const Navbar = () => {
   const { cartCount } = useCart()
+  const { user, isAuthenticated, logout } = useAuth()
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -45,9 +47,30 @@ const Navbar = () => {
               </span>
             )}
           </Link>
-          <Link to="/login" className="btn-primary">
-            Login
-          </Link>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <span className="hidden text-sm text-slate-600 sm:inline">
+                {user?.name}
+                {user?.role === 'seller' && (
+                  <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    Seller
+                  </span>
+                )}
+              </span>
+              <button onClick={logout} className="btn-outline text-sm">
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link to="/login" className="btn-outline text-sm">
+                Login
+              </Link>
+              <Link to="/create-account" className="btn-primary text-sm">
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </header>

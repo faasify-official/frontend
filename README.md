@@ -40,7 +40,7 @@ src/
 ```
 
 ## Styling
-- Tailwind configuration lives in `tailwind.config.js`.
+- Tailwind configuration lives in `tailwind.config.ts`.
 - Shared utility classes: `.btn-primary`, `.btn-outline`, and `.card` defined in `src/index.css`.
 - Inter font loaded via `index.html`.
 
