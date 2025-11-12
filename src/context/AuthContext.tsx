@@ -7,6 +7,7 @@ export type User = {
     email: string
     name: string
     role: 'buyer' | 'seller'
+    hasStorefront?: boolean
     createdAt: string
 }
 
@@ -17,6 +18,7 @@ type AuthContextType = {
     login: (email: string, password: string) => Promise<void>
     register: (name: string, email: string, password: string, role: 'buyer' | 'seller') => Promise<void>
     logout: () => void
+    refreshProfile: () => Promise<void>
     isAuthenticated: boolean
     isSeller: boolean
     isBuyer: boolean
@@ -114,6 +116,13 @@ export const AuthProvider = ({ children }: Props) => {
         localStorage.removeItem('authToken')
     }
 
+    const refreshProfile = async () => {
+        const storedToken = localStorage.getItem('authToken')
+        if (storedToken) {
+            await fetchProfile(storedToken)
+        }
+    }
+
     const value = {
         user,
         token,
@@ -121,6 +130,7 @@ export const AuthProvider = ({ children }: Props) => {
         login,
         register,
         logout,
+        refreshProfile,
         isAuthenticated: !!user && !!token,
         isSeller: user?.role === 'seller',
         isBuyer: user?.role === 'buyer',
