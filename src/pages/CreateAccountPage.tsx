@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@context/AuthContext'
 
 const options = [
   { value: 'buyer', label: 'Buyer' },
@@ -7,7 +8,35 @@ const options = [
 ]
 
 const CreateAccountPage = () => {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const { register } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      await register(name, email, password, role)
+      navigate('/')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <section className="mx-auto flex w-full max-w-lg flex-col gap-6">
@@ -18,7 +47,13 @@ const CreateAccountPage = () => {
         </p>
       </div>
 
-      <form className="card space-y-4">
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="card space-y-4">
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-medium text-slate-600">
             Full Name
@@ -27,6 +62,9 @@ const CreateAccountPage = () => {
             id="name"
             type="text"
             placeholder="Jane Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -39,6 +77,9 @@ const CreateAccountPage = () => {
             id="email"
             type="email"
             placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -50,7 +91,11 @@ const CreateAccountPage = () => {
           <input
             id="password"
             type="password"
-            placeholder="Create a strong password"
+            placeholder="Create a strong password (min. 6 characters)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -80,8 +125,8 @@ const CreateAccountPage = () => {
           </div>
         </fieldset>
 
-        <button type="submit" className="btn-primary w-full">
-          Create Account
+        <button type="submit" disabled={isLoading} className="btn-primary w-full">
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </button>
       </form>
 

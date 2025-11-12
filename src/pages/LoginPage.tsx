@@ -1,6 +1,30 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@context/AuthContext'
 
 const LoginPage = () => {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const { login } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+
+    try {
+      await login(email, password)
+      navigate('/')
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <section className="mx-auto flex w-full max-w-md flex-col gap-6">
       <div className="space-y-2 text-center">
@@ -8,7 +32,13 @@ const LoginPage = () => {
         <p className="text-sm text-slate-500">Access your storefront dashboard with ease.</p>
       </div>
 
-      <form className="card space-y-4">
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="card space-y-4">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-slate-600">
             Email
@@ -17,6 +47,9 @@ const LoginPage = () => {
             id="email"
             type="email"
             placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -29,12 +62,16 @@ const LoginPage = () => {
             id="password"
             type="password"
             placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
 
-        <button type="submit" className="btn-primary w-full">
-          Login
+        <button type="submit" disabled={isLoading} className="btn-primary w-full">
+          {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
 

@@ -6,6 +6,13 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 /**
+ * Gets the auth token from localStorage
+ */
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('authToken')
+}
+
+/**
  * Makes a fetch request to the API
  * @param endpoint - API endpoint (e.g., '/listings', '/cart')
  * @param options - Fetch options (method, headers, body, etc.)
@@ -17,8 +24,10 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
   
+  const token = getAuthToken()
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
   }
 
   const response = await fetch(url, {
@@ -30,7 +39,8 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    const errorData = await response.json().catch(() => ({ error: response.statusText }))
+    throw new Error(errorData.error || `API request failed: ${response.status} ${response.statusText}`)
   }
 
   return response.json()
