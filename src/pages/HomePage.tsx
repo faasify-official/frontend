@@ -1,5 +1,5 @@
-import { products } from '@data/products'
-import ProductCard from '@components/ProductCard'
+import { storefronts } from '@data/storefronts'
+import StorefrontCard from '@components/StorefrontCard'
 
 const HomePage = () => {
   return (
@@ -22,15 +22,15 @@ const HomePage = () => {
           <div>
             <h2 className="text-2xl font-semibold text-charcoal">Sample storefronts</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Browse pre-built experiences tailored for different retail categories.
+              Browse storefronts and discover unique products from independent sellers.
             </p>
           </div>
-          <button className="btn-outline hidden sm:inline-flex">See all templates</button>
+          <button className="btn-outline hidden sm:inline-flex">See all storefronts</button>
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {storefronts.map((storefront) => (
+            <StorefrontCard key={storefront.storeId} storefront={storefront} />
           ))}
         </div>
       </div>

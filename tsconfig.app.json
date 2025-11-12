@@ -30,7 +30,8 @@
       "@layouts/*": ["layouts/*"],
       "@data/*": ["data/*"],
       "@context/*": ["context/*"],
-      "@hooks/*": ["hooks/*"]
+      "@hooks/*": ["hooks/*"],
+      "@utils/*": ["utils/*"]
     }
   },
   "include": ["src"]
