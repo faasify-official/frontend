@@ -10,6 +10,8 @@ import ProductDetailPage from '@pages/ProductDetailPage'
 import StorefrontPage from '@pages/StorefrontPage'
 import CartPage from '@pages/CartPage'
 import ProfilePage from '@pages/ProfilePage'
+import { AuthProvider } from '@context/AuthContext'
+import { CartProvider } from '@context/CartContext'
 
 const router = createBrowserRouter([
   {
@@ -29,6 +31,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <CartProvider>
+        <RouterProvider router={router} />
+      </CartProvider>
+    </AuthProvider>
   </React.StrictMode>,
 )
