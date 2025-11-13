@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@context/AuthContext'
 import { useStorefronts } from '@hooks/useStorefronts'
 import type { Storefront } from '../types/storefront'
 import type { Product } from '../types/product'
-import { products } from '@data/products'
+import { apiGet, apiPost } from '@utils/api'
 
 const ManageStorefrontPage = () => {
   const { isSeller, isLoading: authLoading } = useAuth()
@@ -12,6 +12,9 @@ const ManageStorefrontPage = () => {
   const [selectedStorefront, setSelectedStorefront] = useState<Storefront | null>(null)
   const [storefrontItems, setStorefrontItems] = useState<Product[]>([])
   const [showAddItemForm, setShowAddItemForm] = useState(false)
+  const [isLoadingItems, setIsLoadingItems] = useState(false)
+  const [isAddingItem, setIsAddingItem] = useState(false)
+  const [itemsError, setItemsError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   // Form state for adding new item
@@ -21,6 +24,25 @@ const ManageStorefrontPage = () => {
   const [itemCategory, setItemCategory] = useState('')
   const [itemImage, setItemImage] = useState('')
 
+  // Memoize the first storefront to avoid unnecessary re-renders
+  const firstStorefront = useMemo(() => storefronts[0] || null, [storefronts])
+
+  // Fetch items function - memoized to avoid recreating on every render
+  const fetchItems = useCallback(async (storeId: string) => {
+    setIsLoadingItems(true)
+    setItemsError(null)
+    try {
+      const response = await apiGet<{ items: Product[] }>(`/listings?storeId=${storeId}`)
+      setStorefrontItems(response.items || [])
+    } catch (err) {
+      console.error('Error fetching items:', err)
+      setItemsError(err instanceof Error ? err.message : 'Failed to load items')
+      setStorefrontItems([])
+    } finally {
+      setIsLoadingItems(false)
+    }
+  }, [])
+
   // Redirect if not a seller
   useEffect(() => {
     if (!authLoading && !isSeller) {
@@ -28,49 +50,54 @@ const ManageStorefrontPage = () => {
     }
   }, [isSeller, authLoading, navigate])
 
-  // Select first storefront by default
+  // Select first storefront when storefronts load
   useEffect(() => {
-    if (storefronts.length > 0 && !selectedStorefront) {
-      setSelectedStorefront(storefronts[0])
+    if (!storefrontsLoading && firstStorefront && !selectedStorefront) {
+      setSelectedStorefront(firstStorefront)
     }
-  }, [storefronts, selectedStorefront])
+  }, [storefrontsLoading, firstStorefront, selectedStorefront])
 
-  // Load items for selected storefront
+  // Fetch items whenever selected storefront changes
   useEffect(() => {
     if (selectedStorefront) {
-      // TODO: Replace with API call to fetch items for this storefront
-      // For now, use mock data - filter products that match the storefront's items array
-      const items = selectedStorefront.items
-        .map((productId) => products.find((p) => p.id === productId))
-        .filter((product): product is Product => product !== undefined)
-      setStorefrontItems(items)
+      fetchItems(selectedStorefront.storeId)
     }
-  }, [selectedStorefront])
+  }, [selectedStorefront, fetchItems])
 
-  const handleAddItem = (e: React.FormEvent) => {
+  const handleAddItem = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Replace with API call to add item to storefront
-    // For now, just add to local state
-    const newItem: Product = {
-      id: `item-${Date.now()}`,
-      name: itemName,
-      description: itemDescription,
-      price: parseFloat(itemPrice),
-      category: itemCategory,
-      image: itemImage || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80',
-      averageRating: 0,
-      reviews: [],
-    }
+    if (!selectedStorefront) return
 
-    setStorefrontItems([...storefrontItems, newItem])
-    setShowAddItemForm(false)
-    // Reset form
-    setItemName('')
-    setItemDescription('')
-    setItemPrice('')
-    setItemCategory('')
-    setItemImage('')
-  }
+    setIsAddingItem(true)
+    setItemsError(null)
+
+    try {
+      const response = await apiPost<{ item: Product; message: string }>('/listings', {
+        name: itemName,
+        description: itemDescription,
+        price: parseFloat(itemPrice),
+        category: itemCategory,
+        image: itemImage || '',
+        storeId: selectedStorefront.storeId,
+      })
+
+      // Add the new item to the list
+      setStorefrontItems((prevItems) => [...prevItems, response.item])
+      setShowAddItemForm(false)
+
+      // Reset form
+      setItemName('')
+      setItemDescription('')
+      setItemPrice('')
+      setItemCategory('')
+      setItemImage('')
+    } catch (err) {
+      console.error('Error adding item:', err)
+      setItemsError(err instanceof Error ? err.message : 'Failed to add item')
+    } finally {
+      setIsAddingItem(false)
+    }
+  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemCategory, itemImage])
 
   if (authLoading || storefrontsLoading) {
     return (
@@ -126,7 +153,9 @@ const ManageStorefrontPage = () => {
             value={selectedStorefront?.storeId || ''}
             onChange={(e) => {
               const storefront = storefronts.find((s) => s.storeId === e.target.value)
-              setSelectedStorefront(storefront || null)
+              if (storefront) {
+                setSelectedStorefront(storefront)
+              }
             }}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
@@ -169,10 +198,18 @@ const ManageStorefrontPage = () => {
               <button
                 onClick={() => setShowAddItemForm(!showAddItemForm)}
                 className="btn-primary text-sm"
+                disabled={isLoadingItems}
               >
                 {showAddItemForm ? 'Cancel' : '+ Add Item'}
               </button>
             </div>
+
+            {/* Error message */}
+            {itemsError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {itemsError}
+              </div>
+            )}
 
             {/* Add Item Form */}
             {showAddItemForm && (
@@ -241,14 +278,22 @@ const ManageStorefrontPage = () => {
                     />
                   </div>
                 </div>
-                <button type="submit" className="btn-primary w-full">
-                  Add Item
+                <button
+                  type="submit"
+                  className="btn-primary w-full"
+                  disabled={isAddingItem}
+                >
+                  {isAddingItem ? 'Adding...' : 'Add Item'}
                 </button>
               </form>
             )}
 
             {/* Items List */}
-            {storefrontItems.length === 0 ? (
+            {isLoadingItems ? (
+              <div className="card flex items-center justify-center py-12">
+                <p className="text-slate-500">Loading items...</p>
+              </div>
+            ) : storefrontItems.length === 0 ? (
               <div className="card flex items-center justify-center py-12">
                 <p className="text-slate-500">No items yet. Add your first item to get started!</p>
               </div>

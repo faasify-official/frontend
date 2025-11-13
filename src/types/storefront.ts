@@ -5,6 +5,9 @@ export type Storefront = {
   category: string
   image: string
   owner: string
+  ownerName?: string // Owner's display name/email
   items: string[] // Array of product IDs
+  createdAt?: string
+  updatedAt?: string
 }
 
