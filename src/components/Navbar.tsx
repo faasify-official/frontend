@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@hooks/useCart'
 import { useAuth } from '@context/AuthContext'
 
@@ -11,7 +11,8 @@ const navItems = [
 
 const Navbar = () => {
   const { cartCount } = useCart()
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, logout, isSeller } = useAuth()
+  const hasStorefront = user?.hasStorefront === true
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -39,14 +40,28 @@ const Navbar = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link to="/cart" className="btn-outline relative">
-            <ShoppingCart size={18} />
-            {cartCount > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
-                {cartCount}
-              </span>
-            )}
-          </Link>
+          {isAuthenticated && isSeller ? (
+            hasStorefront ? (
+              <Link to="/manage-storefront" className="btn-outline">
+                <Store size={18} />
+                <span className="hidden sm:inline ml-2">Manage Storefront</span>
+              </Link>
+            ) : (
+              <Link to="/create-storefront" className="btn-outline">
+                <Store size={18} />
+                <span className="hidden sm:inline ml-2">Create Storefront</span>
+              </Link>
+            )
+          ) : (
+            <Link to="/cart" className="btn-outline relative">
+              <ShoppingCart size={18} />
+              {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          )}
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
               <span className="hidden text-sm text-slate-600 sm:inline">
