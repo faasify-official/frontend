@@ -21,3 +21,13 @@ body {
 .card {
   @apply rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100;
 }
+
+/* Hide scrollbar for horizontal scrolling containers */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}

@@ -35,11 +35,11 @@ const StorefrontCard = ({ storefront }: Props) => {
                 <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4">
                     <div className="flex flex-col">
                         <span className="text-xs font-medium text-slate-500">Owner</span>
-                        <span className="text-sm font-semibold text-charcoal">{storefront.owner}</span>
+                        <span className="text-sm font-semibold text-charcoal">{storefront.ownerName || storefront.owner}</span>
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-xs font-medium text-slate-500">Products</span>
-                        <span className="text-sm font-semibold text-primary">{storefront.items.length}</span>
+                        <span className="text-sm font-semibold text-primary">{storefront.itemsCount ?? storefront.items.length}</span>
                     </div>
                 </div>
                 <button className="btn-primary w-full text-sm font-semibold">Explore Storefront</button>
