@@ -1,14 +1,30 @@
+import { useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { storefronts } from '@data/storefronts'
 import { products } from '@data/products'
 import ProductCard from '@components/ProductCard'
+import { useSearch } from '@hooks/useSearch'
 
 const StorefrontPage = () => {
     const { storeId } = useParams<{ storeId: string }>()
+    const { query, clearQuery, registerStorefront } = useSearch()
 
     // Find the storefront by ID
     // TODO: Replace with API call to fetch storefront data
     const storefront = storefronts.find((s) => s.storeId === storeId)
+
+    useEffect(() => {
+        if (!storefront) {
+            registerStorefront(undefined)
+            return
+        }
+
+        registerStorefront({ id: storefront.storeId, name: storefront.name })
+
+        return () => {
+            registerStorefront(undefined)
+        }
+    }, [storefront, registerStorefront])
 
     if (!storefront) {
         return (
@@ -21,9 +37,25 @@ const StorefrontPage = () => {
 
     // Look up products by their IDs
     // TODO: Replace with API call to fetch products for this storefront
-    const storefrontProducts = storefront.items
-        .map((productId) => products.find((p) => p.id === productId))
-        .filter((product): product is NonNullable<typeof product> => product !== undefined)
+    const storefrontProducts = useMemo(
+        () =>
+            storefront.items
+                .map((productId) => products.find((p) => p.id === productId))
+                .filter((product): product is NonNullable<typeof product> => product !== undefined),
+        [storefront],
+    )
+
+    const normalizedQuery = query.trim().toLowerCase()
+    const filteredProducts = useMemo(() => {
+        if (!normalizedQuery) {
+            return storefrontProducts
+        }
+
+        return storefrontProducts.filter((product) => {
+            const haystack = `${product.name} ${product.category} ${product.description}`.toLowerCase()
+            return haystack.includes(normalizedQuery)
+        })
+    }, [normalizedQuery, storefrontProducts])
 
     return (
         <section className="flex flex-col gap-10">
@@ -45,20 +77,31 @@ const StorefrontPage = () => {
 
             {/* Storefront Items */}
             <div className="flex flex-col gap-6">
-                <div>
+                <div className="flex flex-col gap-1">
                     <h2 className="text-2xl font-semibold text-charcoal">All Items</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Browse all products available from {storefront.name}
+                    <p className="text-sm text-slate-500">
+                        {normalizedQuery
+                            ? `Showing ${filteredProducts.length} result${filteredProducts.length === 1 ? '' : 's'} for “${query}”.`
+                            : `Browse all products available from ${storefront.name}`}
                     </p>
                 </div>
 
-                {storefrontProducts.length === 0 ? (
-                    <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
-                        <p className="text-slate-500">This storefront doesn't have any items yet.</p>
+                {filteredProducts.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+                        {storefrontProducts.length === 0 ? (
+                            <p className="text-slate-500">This storefront doesn't have any items yet.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-slate-500">No items match “{query}”.</p>
+                                <button type="button" className="btn-outline mx-auto" onClick={clearQuery}>
+                                    Clear search
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                        {storefrontProducts.map((product) => (
+                        {filteredProducts.map((product) => (
                             <ProductCard key={product.id} product={product} />
                         ))}
                     </div>
