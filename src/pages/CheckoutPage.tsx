@@ -115,6 +115,25 @@ const CheckoutPage = () => {
   
       if (paymentIntent?.status === 'succeeded') {
         showToast('Payment successful! 🎉', 'success')
+
+        // ⬇️ create order in backend DynamoDB
+        await apiPost('/orders', {
+          paymentIntentId: paymentIntent.id,
+          amount: amountInCents,
+          currency: 'cad',           // or 'cad'
+          shippingInfo,              // full shipping object from your state
+          items: cartItems.map((item) => ({
+            itemId: item.product.id,
+            // storeId: item.product.storeId,
+            name: item.product.name,
+            price: item.product.price,
+            quantity: item.quantity,
+            image: item.product.image,
+          })),
+        }).catch((err) => {
+          console.error(err)
+          showToast('Something went wrong while creating order.', 'error')
+        })
   
         // Clear cart and redirect
         clearCart()
