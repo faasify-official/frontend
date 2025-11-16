@@ -2,11 +2,17 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '@hooks/useCart'
 import { useAuth } from '@context/AuthContext'
+import { CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import { useToast } from '@context/ToastContext'
+import { apiPost } from '@utils/api'
 
 const CheckoutPage = () => {
   const { cartItems, total, clearCart } = useCart()
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const stripe = useStripe()
+  const elements = useElements()
+  const { showToast } = useToast()
 
   const [shippingInfo, setShippingInfo] = useState({
     fullName: user?.name || '',
@@ -18,12 +24,13 @@ const CheckoutPage = () => {
     country: 'United States',
   })
 
-  const [paymentInfo, setPaymentInfo] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: '',
-  })
+  // const [paymentInfo, setPaymentInfo] = useState({
+  //   cardNumber: '',
+  //   cardName: '',
+  //   expiryDate: '',
+  //   cvv: '',
+  // })
+  const [cardName, setCardName] = useState(user?.name || '')
 
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -33,26 +40,96 @@ const CheckoutPage = () => {
       [e.target.name]: e.target.value,
     }))
   }
+  
+  // const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   setPaymentInfo((prev) => ({
+  //     ...prev,
+  //     [e.target.name]: e.target.value,
+  //   }))
+  // }
 
-  const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPaymentInfo((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
-  }
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   setIsProcessing(true)
+
+  //   // Simulate order processing
+  //   await new Promise((resolve) => setTimeout(resolve, 1500))
+
+  //   // Clear cart and redirect
+  //   clearCart()
+  //   navigate('/cart', { state: { orderPlaced: true } })
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+  
+    if (!stripe || !elements) {
+      showToast('Stripe is not ready yet. Please try again.', 'error')
+      return
+    }
+  
+    const cardNumberElement = elements.getElement(CardNumberElement)
+    if (!cardNumberElement) {
+      showToast('Payment form is not ready.', 'error')
+      return
+    }
+  
     setIsProcessing(true)
-
-    // Simulate order processing
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    // Clear cart and redirect
-    clearCart()
-    navigate('/cart', { state: { orderPlaced: true } })
+  
+    try {
+      // Convert cart total (e.g. 98.99) to cents
+      const amountInCents = Math.round(total * 100)
+  
+      // Ask your backend to create a PaymentIntent
+      const { clientSecret } = await apiPost<{ clientSecret: string }>(
+        '/payments/create-payment-intent',
+        {
+          amount: amountInCents,
+          // use 'cad' if you prefer, or keep 'usd'
+          currency: 'cad',
+        },
+      )
+  
+      // Confirm the payment with Stripe using the card input
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardNumberElement,
+          billing_details: {
+            name: shippingInfo.fullName,
+            email: shippingInfo.email,
+            address: {
+              line1: shippingInfo.address,
+              city: shippingInfo.city,
+              postal_code: shippingInfo.zipCode,
+              // you can map shippingInfo.country to ISO codes later
+            },
+          },
+        },
+      })
+  
+      if (error) {
+        console.error(error)
+        showToast(error.message || 'Payment failed. Please try again.', 'error')
+        return
+      }
+  
+      if (paymentIntent?.status === 'succeeded') {
+        showToast('Payment successful! 🎉', 'success')
+  
+        // Clear cart and redirect
+        clearCart()
+        navigate('/cart', { state: { orderPlaced: true } })
+      } else {
+        showToast(`Payment status: ${paymentIntent?.status}`, 'info')
+      }
+    } catch (err) {
+      console.error(err)
+      showToast('Something went wrong while processing payment.', 'error')
+    } finally {
+      setIsProcessing(false)
+    }
   }
-
+  
   if (cartItems.length === 0) {
     return (
       <section className="space-y-8">
@@ -210,79 +287,62 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Payment Information */}
+         {/* Payment Information */}
           <div className="card space-y-4">
             <h2 className="text-lg font-semibold text-charcoal">Payment Information</h2>
 
             <div className="space-y-4">
+              {/* Name on Card */}
               <div className="space-y-2">
-                <label htmlFor="cardNumber" className="text-sm font-medium text-slate-600">
-                  Card Number
-                </label>
-                <input
-                  id="cardNumber"
-                  name="cardNumber"
-                  type="text"
-                  placeholder="1234 5678 9012 3456"
-                  value={paymentInfo.cardNumber}
-                  onChange={handlePaymentChange}
-                  required
-                  maxLength={19}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="cardName" className="text-sm font-medium text-slate-600">
+                <label className="text-sm font-medium text-slate-600">
                   Name on Card
                 </label>
                 <input
-                  id="cardName"
-                  name="cardName"
                   type="text"
-                  placeholder="John Doe"
-                  value={paymentInfo.cardName}
-                  onChange={handlePaymentChange}
+                  placeholder="As shown on card"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
                   required
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="expiryDate" className="text-sm font-medium text-slate-600">
-                    Expiry Date
-                  </label>
-                  <input
-                    id="expiryDate"
-                    name="expiryDate"
-                    type="text"
-                    placeholder="MM/YY"
-                    value={paymentInfo.expiryDate}
-                    onChange={handlePaymentChange}
-                    required
-                    maxLength={5}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="cvv" className="text-sm font-medium text-slate-600">
-                    CVV
-                  </label>
-                  <input
-                    id="cvv"
-                    name="cvv"
-                    type="text"
-                    placeholder="123"
-                    value={paymentInfo.cvv}
-                    onChange={handlePaymentChange}
-                    required
-                    maxLength={4}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              {/* Card Number */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-600">Card Number</label>
+                <div className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                  <CardNumberElement
+                    options={{
+                      showIcon: true,
+                    }}
                   />
                 </div>
               </div>
+
+              {/* Expiry + CVC */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-600">
+                    Expiry Date
+                  </label>
+                  <div className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                    <CardExpiryElement />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-600">
+                    CVC
+                  </label>
+                  <div className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                    <CardCvcElement />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400">
+                Use Stripe test card 4242 4242 4242 4242, any future expiry, any CVC.
+              </p>
             </div>
           </div>
         </div>

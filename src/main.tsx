@@ -14,6 +14,16 @@ import ProfilePage from '@pages/ProfilePage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
+import { Elements } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!)
+
+const CheckoutWithStripe = () => (
+  <Elements stripe={stripePromise}>
+    <CheckoutPage />
+  </Elements>
+)
 
 const router = createBrowserRouter([
   {
@@ -26,7 +36,7 @@ const router = createBrowserRouter([
       { path: 'product/:id', element: <ProductDetailPage /> },
       { path: 'storefront/:storeId', element: <StorefrontPage /> },
       { path: 'cart', element: <CartPage /> },
-      { path: 'checkout', element: <CheckoutPage /> },
+      { path: 'checkout', element: <CheckoutWithStripe /> },
       { path: 'profile', element: <ProfilePage /> },
     ],
   },
