@@ -1,13 +1,20 @@
 // src/pages/ReviewItemPage.tsx
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useAuth } from "@context/AuthContext";
 
 export default function ReviewItemPage() {
     const { id } = useParams<{ id: string }>(); // product/listing id
     const navigate = useNavigate();
+    const location = useLocation();
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
+
+    const { user, token } = useAuth();
+    const { storeId } = (location.state as { storeId?: string }) || {};
+
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -21,17 +28,28 @@ export default function ReviewItemPage() {
         }
 
         const payload = {
-            itemId: id,
+            productId: id,
             rating,
             comment,
+            storeId, // TODO: pass this in as a prop or from product context
             // TODO: add userId from AuthContext when backend is ready
         };
 
-        // For now, just log the payload so teammates can see the structure
-        console.log("Review payload (frontend only, no API yet):", payload);
+        const res = await fetch(`${API_BASE_URL}/reviews`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            // credentials: "include", // so the JWT cookie is sent to backend
+            body: JSON.stringify(payload),
+        });
 
-        // Later: call POST /reviews then navigate back
-        // await fetch(`${API_BASE_URL}/reviews`, { ... })
+        if (!res.ok) {
+            console.error("Failed to submit review", await res.text());
+            alert("Failed to submit review.");
+            return;
+        }
 
         navigate("/purchases");
     };

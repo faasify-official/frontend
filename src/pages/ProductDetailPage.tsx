@@ -1,18 +1,41 @@
-import { useMemo } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart } from 'lucide-react'
 import { products } from '@data/products'
 import ReviewBadge from '@components/ReviewBadge'
 import { useCart } from '@hooks/useCart'
 
+type Review = {
+  reviewId: string
+  productId: string
+  storeId: string
+  userId: string
+  reviewer?: string
+  rating: number
+  comment: string
+  createdAt: string
+}
+
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart()
 
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewsError, setReviewsError] = useState<string | null>(null)
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL
+
   const product = useMemo(() => products.find((item) => item.id === id), [id])
   const cartItem = product ? cartItems.find((item) => item.product.id === product.id) : undefined
   const quantity = cartItem?.quantity || 0
+
+  const averageRating = useMemo(() => {
+    if (!reviews.length) return 0
+    const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
+    return sum / reviews.length
+  }, [reviews])
 
   const handleQuantityChange = (newQuantity: number) => {
     if (!product) return
@@ -24,6 +47,39 @@ const ProductDetailPage = () => {
       updateQuantity(product.id, newQuantity)
     }
   }
+
+  // Fetch reviews for this product from the backend
+  useEffect(() => {
+    if (!id) return
+
+    const fetchReviews = async () => {
+      setReviewsLoading(true)
+      setReviewsError(null)
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/reviews/product/${id}`)
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('Failed to fetch reviews:', text)
+          setReviewsError('Failed to load reviews.')
+          setReviews([])
+          return
+        }
+
+        const data = await res.json()
+        setReviews(data.reviews ?? [])
+      } catch (err) {
+        console.error('Error fetching reviews:', err)
+        setReviewsError('Failed to load reviews.')
+        setReviews([])
+      } finally {
+        setReviewsLoading(false)
+      }
+    }
+
+    fetchReviews()
+  }, [id, API_BASE_URL])
+
 
   if (!product) {
     return (
@@ -46,7 +102,14 @@ const ProductDetailPage = () => {
 
       <div className="space-y-6">
         <div className="space-y-3">
-          <ReviewBadge rating={product.averageRating} label={`(${product.reviews.length} reviews)`} />
+          <ReviewBadge
+            rating={averageRating}
+            label={
+              reviews.length > 0
+                ? `(${reviews.length} reviews)`
+                : '(No reviews yet)'
+            }
+          />
           <h1 className="text-3xl font-semibold text-charcoal">{product.name}</h1>
           <p className="text-2xl font-bold text-primary">${product.price.toFixed(2)}</p>
           <p className="text-sm text-slate-600">{product.description}</p>
@@ -88,17 +151,44 @@ const ProductDetailPage = () => {
 
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-charcoal">Reviews</h2>
-          <ul className="space-y-3">
-            {product.reviews.map((review) => (
-              <li key={review.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between text-sm text-slate-600">
-                  <span className="font-semibold text-charcoal">{review.reviewer}</span>
-                  <ReviewBadge rating={review.rating} />
-                </div>
-                <p className="mt-2 text-sm text-slate-600">{review.comment}</p>
-              </li>
-            ))}
-          </ul>
+
+          {reviewsLoading && (
+            <p className="text-sm text-slate-500">Loading reviews...</p>
+          )}
+
+          {!reviewsLoading && reviewsError && (
+            <p className="text-sm text-red-500">{reviewsError}</p>
+          )}
+
+          {!reviewsLoading && !reviewsError && reviews.length === 0 && (
+            <p className="text-sm text-slate-500">
+              There are no reviews for this service yet.
+            </p>
+          )}
+
+          {!reviewsLoading && !reviewsError && reviews.length > 0 && (
+            <ul className="space-y-3">
+              {reviews.map((review) => (
+                <li
+                  key={review.reviewId}
+                  className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between text-sm text-slate-600">
+                    <span className="font-semibold text-charcoal">
+                      Verified customer
+                    </span>
+                    <ReviewBadge rating={review.rating} />
+                  </div>
+                  {review.comment && (
+                    <p className="mt-2 text-sm text-slate-600">{review.comment}</p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-400">
+                    {new Date(review.createdAt).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </section>

@@ -8,6 +8,7 @@ type BoughtItem = {
     price?: number;
     image?: string;
     averageRating?: number;
+    storeId: string;
     // reviews: unknown[]; // will be defined later based on backend
 };
 
@@ -20,15 +21,17 @@ export default function BoughtItemsPage() {
         // TODO: Replace this dummy data with a real API call
         // all bought items for the currently authenticated user.
         const dummy: BoughtItem[] = [
-            { id: "1", name: "Example service A" },
-            { id: "2", name: "Example service B" },
+            { id: "1", name: "Example service A", storeId: "store-1" },
+            { id: "2", name: "Example service B", storeId: "store-2" },
         ];
         setItems(dummy);
         setLoading(false);
     }, []);
 
-    const handleReviewClick = (itemId: string) => {
-        navigate(`/product/${itemId}/review`);
+    const handleReviewClick = (item: BoughtItem) => {
+        navigate(`/product/${item.id}/review`, {
+            state: { storeId: item.storeId },
+        });
     }
 
     if (loading) {
@@ -63,7 +66,7 @@ export default function BoughtItemsPage() {
                             {/* Review button for each bought item */}
                             <button
                                 className="px-4 py-2 text-sm rounded-full border hover:bg-gray-50"
-                                onClick={() => handleReviewClick(item.id)}
+                                onClick={() => handleReviewClick(item)}
                             >
                                 Write review
                             </button>
