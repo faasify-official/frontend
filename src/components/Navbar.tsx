@@ -1,4 +1,4 @@
-import { Link, NavLink, useMatch} from 'react-router-dom'
+import { Link, NavLink, useMatch } from 'react-router-dom'
 import { ShoppingCart } from 'lucide-react'
 import { useCart } from '@hooks/useCart'
 import { useAuth } from '@context/AuthContext'
@@ -7,6 +7,8 @@ import SearchBar from '@components/SearchBar'
 const navItems = [
   { label: 'Home', to: '/' },
   { label: 'Profile', to: '/profile' },
+  { label: 'Purchases', to: '/purchases' },
+
 ]
 
 const Navbar = () => {

@@ -11,6 +11,8 @@ import StorefrontPage from '@pages/StorefrontPage'
 import CartPage from '@pages/CartPage'
 import CheckoutPage from '@pages/CheckoutPage'
 import ProfilePage from '@pages/ProfilePage'
+import BoughtItemsPage from '@pages/BoughtItemsPage'
+import ReviewItemPage from '@pages/ReviewItemPage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
@@ -34,10 +36,12 @@ const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'create-account', element: <CreateAccountPage /> },
       { path: 'product/:id', element: <ProductDetailPage /> },
+      { path: 'product/:id/review', element: <ReviewItemPage /> },
       { path: 'storefront/:storeId', element: <StorefrontPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'checkout', element: <CheckoutWithStripe /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'purchases', element: <BoughtItemsPage /> },
     ],
   },
 ])
