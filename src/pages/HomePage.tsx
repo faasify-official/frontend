@@ -69,7 +69,9 @@ const HomePage = () => {
           <div>
             <h2 className="text-2xl font-semibold text-charcoal">Featured storefronts</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Browse storefronts and discover unique products from independent sellers.
+              {normalizedQuery
+                ? `Showing ${filteredStorefronts.length} result${filteredStorefronts.length === 1 ? '' : 's'} for “${query}”.`
+                : 'Browse storefronts and discover unique products from independent sellers.'}
             </p>
           </div>
           <button className="btn-outline hidden sm:inline-flex">See all storefronts</button>

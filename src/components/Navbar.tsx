@@ -2,11 +2,13 @@ import { Link, NavLink } from 'react-router-dom'
 import { ShoppingCart, Store } from 'lucide-react'
 import { useCart } from '@hooks/useCart'
 import { useAuth } from '@context/AuthContext'
+import SearchBar from '@components/SearchBar'
 
 const navItems = [
   { label: 'Home', to: '/' },
-  { label: 'Cart', to: '/cart' },
   { label: 'Profile', to: '/profile' },
+  { label: 'Purchases', to: '/purchases' },
+
 ]
 
 const Navbar = () => {
@@ -91,6 +93,4 @@ const Navbar = () => {
     </header>
   )
 }
-
 export default Navbar
-
