@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '@context/AuthContext'
+import { useSubscription } from '../hooks/useSubscription'
+import { useToast } from '@context/ToastContext'
 import type { Storefront } from '../types/storefront'
 
 type Props = {
@@ -6,6 +9,32 @@ type Props = {
 }
 
 const StorefrontCard = ({ storefront }: Props) => {
+    const { isBuyer } = useAuth()
+    const { isSubscribed, isLoading, isChecking, subscribe, unsubscribe } = useSubscription(storefront.storeId)
+    const { showToast } = useToast()
+
+    const handleSubscribe = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        try {
+            await subscribe()
+            showToast('Successfully subscribed to storefront!', 'success')
+        } catch (error: any) {
+            showToast(error.message || 'Failed to subscribe', 'error')
+        }
+    }
+
+    const handleUnsubscribe = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        try {
+            await unsubscribe()
+            showToast('Successfully unsubscribed from storefront', 'success')
+        } catch (error: any) {
+            showToast(error.message || 'Failed to unsubscribe', 'error')
+        }
+    }
+
     return (
         <Link
             to={`/storefront/${storefront.storeId}`}
@@ -35,13 +64,25 @@ const StorefrontCard = ({ storefront }: Props) => {
                 <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4">
                     <div className="flex flex-col">
                         <span className="text-xs font-medium text-slate-500">Owner</span>
-                        <span className="text-sm font-semibold text-charcoal">{storefront.owner}</span>
+                        <span className="text-sm font-semibold text-charcoal">{storefront.ownerName || storefront.owner}</span>
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-xs font-medium text-slate-500">Products</span>
-                        <span className="text-sm font-semibold text-primary">{storefront.items.length}</span>
+                        <span className="text-sm font-semibold text-primary">{storefront.itemsCount ?? storefront.items.length}</span>
                     </div>
                 </div>
+                {isBuyer && !isChecking && (
+                    <button
+                        onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
+                        disabled={isLoading}
+                        className={`w-full text-sm font-semibold ${isSubscribed
+                            ? 'btn-outline'
+                            : 'btn-primary'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        {isLoading ? 'Loading...' : isSubscribed ? 'Unsubscribe' : 'Subscribe'}
+                    </button>
+                )}
                 <button className="btn-primary w-full text-sm font-semibold">Explore Storefront</button>
             </div>
         </Link>
