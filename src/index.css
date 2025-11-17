@@ -18,16 +18,111 @@ body {
   @apply inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
 }
 
+.btn-outline-light {
+  @apply inline-flex items-center justify-center rounded-full border border-white px-4 py-2 text-sm font-semibold text-white transition hover:bg-white hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white;
+}
+
 .card {
   @apply rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100;
 }
 
-/* Hide scrollbar for horizontal scrolling containers */
-.scrollbar-hide {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.6s ease-out;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.6s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 0.5s ease-out;
+}
+
+.animate-stagger-1 {
+  animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+.animate-stagger-2 {
+  animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.animate-stagger-3 {
+  animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+.animate-stagger-4 {
+  animation: fadeInUp 0.6s ease-out 0.4s both;
+}
+
+.animate-stagger-5 {
+  animation: fadeInUp 0.6s ease-out 0.5s both;
+}
+
+.animate-stagger-6 {
+  animation: fadeInUp 0.6s ease-out 0.6s both;
+}
+
+.animate-button-hover {
+  @apply transition-all duration-300 hover:scale-105 active:scale-95;
 }

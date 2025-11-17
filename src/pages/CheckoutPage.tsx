@@ -5,6 +5,7 @@ import { useAuth } from '@context/AuthContext'
 import { CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { useToast } from '@context/ToastContext'
 import { apiPost } from '@utils/api'
+import { Lock, ArrowLeft, CheckCircle } from 'lucide-react'
 
 const CheckoutPage = () => {
   const { cartItems, total, clearCart } = useCart()
@@ -24,12 +25,6 @@ const CheckoutPage = () => {
     country: 'United States',
   })
 
-  // const [paymentInfo, setPaymentInfo] = useState({
-  //   cardNumber: '',
-  //   cardName: '',
-  //   expiryDate: '',
-  //   cvv: '',
-  // })
   const [cardName, setCardName] = useState(user?.name || '')
 
   const [isProcessing, setIsProcessing] = useState(false)
@@ -152,10 +147,19 @@ const CheckoutPage = () => {
   if (cartItems.length === 0) {
     return (
       <section className="space-y-8">
-        <div className="card flex flex-col items-center gap-4 text-center">
-          <p className="text-lg font-medium text-charcoal">Your cart is empty.</p>
-          <Link to="/" className="btn-primary">
-            Browse storefronts
+        <div className="animate-fade-in-up card flex flex-col items-center gap-6 py-12 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+            <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-charcoal">Your cart is empty</p>
+            <p className="mt-1 text-sm text-slate-500">Add some items before checkout</p>
+          </div>
+          <Link to="/" className="btn-primary flex items-center gap-2">
+            <ArrowLeft size={18} />
+            Back to Shopping
           </Link>
         </div>
       </section>
@@ -165,10 +169,16 @@ const CheckoutPage = () => {
   if (!isAuthenticated) {
     return (
       <section className="space-y-8">
-        <div className="card flex flex-col items-center gap-4 text-center">
-          <p className="text-lg font-medium text-charcoal">Please log in to checkout.</p>
+        <div className="animate-fade-in-up card flex flex-col items-center gap-6 py-12 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <Lock size={32} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-charcoal">Sign in to continue</p>
+            <p className="mt-1 text-sm text-slate-500">You need to be logged in to complete your purchase</p>
+          </div>
           <Link to="/login" className="btn-primary">
-            Login
+            Log In
           </Link>
         </div>
       </section>
@@ -177,20 +187,27 @@ const CheckoutPage = () => {
 
   return (
     <section className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold text-charcoal">Checkout</h1>
-        <p className="text-sm text-slate-500">Complete your order by filling in the details below.</p>
+      {/* Header */}
+      <div className="animate-fade-in-up">
+        <h1 className="text-4xl font-extrabold text-charcoal">Checkout</h1>
+        <p className="mt-2 text-sm text-slate-500">Complete your order securely</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+        {/* Forms Section */}
         <div className="space-y-6">
           {/* Shipping Information */}
-          <div className="card space-y-4">
-            <h2 className="text-lg font-semibold text-charcoal">Shipping Information</h2>
+          <div className="animate-stagger-1 card space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
+                <span className="text-sm font-bold text-primary">1</span>
+              </div>
+              <h2 className="text-lg font-bold text-charcoal">Shipping Information</h2>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <label htmlFor="fullName" className="text-sm font-medium text-slate-600">
+                <label htmlFor="fullName" className="text-sm font-semibold text-slate-700">
                   Full Name
                 </label>
                 <input
@@ -201,12 +218,12 @@ const CheckoutPage = () => {
                   value={shippingInfo.fullName}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <label htmlFor="email" className="text-sm font-medium text-slate-600">
+                <label htmlFor="email" className="text-sm font-semibold text-slate-700">
                   Email
                 </label>
                 <input
@@ -217,12 +234,12 @@ const CheckoutPage = () => {
                   value={shippingInfo.email}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <label htmlFor="address" className="text-sm font-medium text-slate-600">
+                <label htmlFor="address" className="text-sm font-semibold text-slate-700">
                   Street Address
                 </label>
                 <input
@@ -233,12 +250,12 @@ const CheckoutPage = () => {
                   value={shippingInfo.address}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="city" className="text-sm font-medium text-slate-600">
+                <label htmlFor="city" className="text-sm font-semibold text-slate-700">
                   City
                 </label>
                 <input
@@ -249,13 +266,13 @@ const CheckoutPage = () => {
                   value={shippingInfo.city}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="state" className="text-sm font-medium text-slate-600">
-                  State
+                <label htmlFor="state" className="text-sm font-semibold text-slate-700">
+                  State/Province
                 </label>
                 <input
                   id="state"
@@ -265,13 +282,13 @@ const CheckoutPage = () => {
                   value={shippingInfo.state}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="zipCode" className="text-sm font-medium text-slate-600">
-                  ZIP Code
+                <label htmlFor="zipCode" className="text-sm font-semibold text-slate-700">
+                  ZIP/Postal Code
                 </label>
                 <input
                   id="zipCode"
@@ -281,12 +298,12 @@ const CheckoutPage = () => {
                   value={shippingInfo.zipCode}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="country" className="text-sm font-medium text-slate-600">
+              <div className="space-y-2 sm:col-span-2">
+                <label htmlFor="country" className="text-sm font-semibold text-slate-700">
                   Country
                 </label>
                 <select
@@ -295,7 +312,7 @@ const CheckoutPage = () => {
                   value={shippingInfo.country}
                   onChange={handleShippingChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 >
                   <option value="United States">United States</option>
                   <option value="Canada">Canada</option>
@@ -307,13 +324,18 @@ const CheckoutPage = () => {
           </div>
 
          {/* Payment Information */}
-          <div className="card space-y-4">
-            <h2 className="text-lg font-semibold text-charcoal">Payment Information</h2>
+          <div className="animate-stagger-2 card space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
+                <span className="text-sm font-bold text-primary">2</span>
+              </div>
+              <h2 className="text-lg font-bold text-charcoal">Payment Information</h2>
+            </div>
 
             <div className="space-y-4">
               {/* Name on Card */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-600">
+                <label className="text-sm font-semibold text-slate-700">
                   Name on Card
                 </label>
                 <input
@@ -322,14 +344,14 @@ const CheckoutPage = () => {
                   value={cardName}
                   onChange={(e) => setCardName(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               {/* Card Number */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-600">Card Number</label>
-                <div className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                <label className="text-sm font-semibold text-slate-700">Card Number</label>
+                <div className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                   <CardNumberElement
                     options={{
                       showIcon: true,
@@ -341,90 +363,111 @@ const CheckoutPage = () => {
               {/* Expiry + CVC */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">
+                  <label className="text-sm font-semibold text-slate-700">
                     Expiry Date
                   </label>
-                  <div className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                  <div className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                     <CardExpiryElement />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">
+                  <label className="text-sm font-semibold text-slate-700">
                     CVC
                   </label>
-                  <div className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                  <div className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                     <CardCvcElement />
                   </div>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-400">
-                Use Stripe test card 4242 4242 4242 4242, any future expiry, any CVC.
-              </p>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <p className="text-xs font-medium text-blue-700">
+                  🧪 Test card: <span className="font-mono">4242 4242 4242 4242</span> • Any future date • Any CVC
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Order Summary */}
-        <aside className="card space-y-4 self-start lg:sticky lg:top-4">
-          <h2 className="text-lg font-semibold text-charcoal">Order Summary</h2>
+        <aside className="animate-stagger-3 card space-y-6 self-start lg:sticky lg:top-4">
+          <div>
+            <h2 className="text-lg font-bold text-charcoal mb-4 flex items-center gap-2">
+              <CheckCircle size={20} className="text-primary" />
+              Order Summary
+            </h2>
+          </div>
 
-          <div className="space-y-3">
-            {cartItems.map((item) => {
+          <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+            {cartItems.map((item, idx) => {
               const itemTotal = item.product.price * item.quantity
               return (
-                <div key={item.product.id} className="flex items-center gap-3">
+                <div key={item.product.id} className={`animate-stagger-${(idx % 6) + 1} flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors`}>
                   <img
                     src={item.product.image}
                     alt={item.product.name}
-                    className="h-16 w-16 rounded-xl object-cover"
+                    className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
                   />
-                  <div className="flex flex-1 flex-col gap-1">
-                    <p className="text-sm font-medium text-charcoal">
-                      {item.product.name} {item.quantity > 1 && `× ${item.quantity}`}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-charcoal truncate">
+                      {item.product.name}
                     </p>
-                    <span className="text-xs text-slate-500">
-                      ${item.product.price.toFixed(2)} each
-                    </span>
-                    <span className="text-xs font-medium text-primary">
-                      ${itemTotal.toFixed(2)} total
-                    </span>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {item.quantity} × ${item.product.price.toFixed(2)}
+                    </p>
+                    <p className="text-sm font-bold text-primary mt-1">
+                      ${itemTotal.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <hr />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-slate-600">
-              <span>Subtotal</span>
-              <span>${total.toFixed(2)}</span>
+          <div className="border-t border-slate-200 pt-4 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Subtotal</span>
+              <span className="font-medium text-charcoal">${total.toFixed(2)}</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-slate-600">
-              <span>Shipping</span>
-              <span className="text-slate-400">Free</span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Shipping</span>
+              <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded">Free</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-slate-600">
-              <span>Tax</span>
-              <span>${(total * 0.1).toFixed(2)}</span>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Tax (10%)</span>
+              <span className="font-medium text-charcoal">${(total * 0.1).toFixed(2)}</span>
             </div>
           </div>
 
-          <hr />
-
-          <div className="flex items-center justify-between text-base font-semibold text-charcoal">
-            <span>Total</span>
-            <span>${(total * 1.1).toFixed(2)}</span>
+          <div className="border-t border-slate-200 pt-4">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-charcoal font-semibold">Total</span>
+              <span className="text-2xl font-extrabold text-primary">
+                ${(total * 1.1).toFixed(2)}
+              </span>
+            </div>
           </div>
 
-          <button type="submit" disabled={isProcessing} className="btn-primary w-full">
-            {isProcessing ? 'Processing...' : 'Place Order'}
+          <button
+            type="submit"
+            disabled={isProcessing}
+            className="btn-primary w-full font-semibold py-3 animate-button-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isProcessing ? (
+              <>
+                <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Lock size={18} />
+                Complete Purchase
+              </>
+            )}
           </button>
 
-          <Link to="/cart" className="block text-center text-sm text-slate-500 hover:text-primary">
+          <Link to="/cart" className="block text-center text-sm text-slate-500 hover:text-primary transition-colors">
             ← Back to cart
           </Link>
         </aside>
