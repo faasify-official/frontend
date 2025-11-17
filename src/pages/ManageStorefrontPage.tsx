@@ -4,7 +4,7 @@ import { useAuth } from '@context/AuthContext'
 import { useStorefronts } from '@hooks/useStorefronts'
 import type { Storefront } from '../types/storefront'
 import type { Product } from '../types/product'
-import { apiGet, apiPost } from '@utils/api'
+import { apiGet, apiPost, apiPut, apiDelete } from '@utils/api'
 
 const ManageStorefrontPage = () => {
   const { isSeller, isLoading: authLoading } = useAuth()
@@ -12,17 +12,21 @@ const ManageStorefrontPage = () => {
   const [selectedStorefront, setSelectedStorefront] = useState<Storefront | null>(null)
   const [storefrontItems, setStorefrontItems] = useState<Product[]>([])
   const [showAddItemForm, setShowAddItemForm] = useState(false)
+  const [editingItem, setEditingItem] = useState<Product | null>(null)
   const [isLoadingItems, setIsLoadingItems] = useState(false)
   const [isAddingItem, setIsAddingItem] = useState(false)
+  const [isUpdatingItem, setIsUpdatingItem] = useState(false)
+  const [isDeletingItem, setIsDeletingItem] = useState<string | null>(null)
   const [itemsError, setItemsError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  // Form state for adding new item
+  // Form state for adding/editing item
   const [itemName, setItemName] = useState('')
   const [itemDescription, setItemDescription] = useState('')
   const [itemPrice, setItemPrice] = useState('')
   const [itemCategory, setItemCategory] = useState('')
   const [itemImage, setItemImage] = useState('')
+  const [itemQuantity, setItemQuantity] = useState('')
 
   // Memoize the first storefront to avoid unnecessary re-renders
   const firstStorefront = useMemo(() => storefronts[0] || null, [storefronts])
@@ -64,6 +68,17 @@ const ManageStorefrontPage = () => {
     }
   }, [selectedStorefront, fetchItems])
 
+  const resetForm = useCallback(() => {
+    setItemName('')
+    setItemDescription('')
+    setItemPrice('')
+    setItemCategory('')
+    setItemImage('')
+    setItemQuantity('')
+    setEditingItem(null)
+    setShowAddItemForm(false)
+  }, [])
+
   const handleAddItem = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedStorefront) return
@@ -78,26 +93,81 @@ const ManageStorefrontPage = () => {
         price: parseFloat(itemPrice),
         category: itemCategory,
         image: itemImage || '',
+        quantity: itemQuantity ? parseInt(itemQuantity, 10) : 0,
         storeId: selectedStorefront.storeId,
       })
 
       // Add the new item to the list
       setStorefrontItems((prevItems) => [...prevItems, response.item])
-      setShowAddItemForm(false)
-
-      // Reset form
-      setItemName('')
-      setItemDescription('')
-      setItemPrice('')
-      setItemCategory('')
-      setItemImage('')
+      resetForm()
     } catch (err) {
       console.error('Error adding item:', err)
       setItemsError(err instanceof Error ? err.message : 'Failed to add item')
     } finally {
       setIsAddingItem(false)
     }
-  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemCategory, itemImage])
+  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemCategory, itemImage, itemQuantity, resetForm])
+
+  const handleEditItem = useCallback((item: Product) => {
+    setEditingItem(item)
+    setItemName(item.name)
+    setItemDescription(item.description)
+    setItemPrice(item.price.toString())
+    setItemCategory(item.category)
+    setItemImage(item.image)
+    setItemQuantity((item.quantity || 0).toString())
+    setShowAddItemForm(false)
+  }, [])
+
+  const handleUpdateItem = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingItem) return
+
+    setIsUpdatingItem(true)
+    setItemsError(null)
+
+    try {
+      const response = await apiPut<{ item: Product; message: string }>(`/listings/${editingItem.id}`, {
+        name: itemName,
+        description: itemDescription,
+        price: parseFloat(itemPrice),
+        category: itemCategory,
+        image: itemImage || '',
+        quantity: itemQuantity ? parseInt(itemQuantity, 10) : 0,
+      })
+
+      // Update the item in the list
+      setStorefrontItems((prevItems) =>
+        prevItems.map((item) => (item.id === editingItem.id ? response.item : item))
+      )
+      resetForm()
+    } catch (err) {
+      console.error('Error updating item:', err)
+      setItemsError(err instanceof Error ? err.message : 'Failed to update item')
+    } finally {
+      setIsUpdatingItem(false)
+    }
+  }, [editingItem, itemName, itemDescription, itemPrice, itemCategory, itemImage, itemQuantity, resetForm])
+
+  const handleDeleteItem = useCallback(async (itemId: string) => {
+    if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeletingItem(itemId)
+    setItemsError(null)
+
+    try {
+      await apiDelete<{ message: string }>(`/listings/${itemId}`)
+      // Remove the item from the list
+      setStorefrontItems((prevItems) => prevItems.filter((item) => item.id !== itemId))
+    } catch (err) {
+      console.error('Error deleting item:', err)
+      setItemsError(err instanceof Error ? err.message : 'Failed to delete item')
+    } finally {
+      setIsDeletingItem(null)
+    }
+  }, [])
 
   if (authLoading || storefrontsLoading) {
     return (
@@ -195,13 +265,18 @@ const ManageStorefrontPage = () => {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-semibold text-charcoal">Items</h2>
-              <button
-                onClick={() => setShowAddItemForm(!showAddItemForm)}
-                className="btn-primary text-sm"
-                disabled={isLoadingItems}
-              >
-                {showAddItemForm ? 'Cancel' : '+ Add Item'}
-              </button>
+              {!editingItem && (
+                <button
+                  onClick={() => {
+                    resetForm()
+                    setShowAddItemForm(!showAddItemForm)
+                  }}
+                  className="btn-primary text-sm"
+                  disabled={isLoadingItems}
+                >
+                  {showAddItemForm ? 'Cancel' : '+ Add Item'}
+                </button>
+              )}
             </div>
 
             {/* Error message */}
@@ -211,10 +286,23 @@ const ManageStorefrontPage = () => {
               </div>
             )}
 
-            {/* Add Item Form */}
-            {showAddItemForm && (
-              <form onSubmit={handleAddItem} className="card space-y-4">
-                <h3 className="text-lg font-semibold text-charcoal">Add New Item</h3>
+            {/* Add/Edit Item Form */}
+            {(showAddItemForm || editingItem) && (
+              <form onSubmit={editingItem ? handleUpdateItem : handleAddItem} className="card space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal">
+                    {editingItem ? 'Edit Item' : 'Add New Item'}
+                  </h3>
+                  {editingItem && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="text-sm text-slate-500 hover:text-slate-700"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-600">
@@ -269,21 +357,39 @@ const ManageStorefrontPage = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-600">Image URL</label>
+                    <label className="text-sm font-medium text-slate-600">Quantity</label>
                     <input
-                      type="url"
-                      value={itemImage}
-                      onChange={(e) => setItemImage(e.target.value)}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={itemQuantity}
+                      onChange={(e) => setItemQuantity(e.target.value)}
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      placeholder="0"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-600">Image URL</label>
+                  <input
+                    type="url"
+                    value={itemImage}
+                    onChange={(e) => setItemImage(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
                 </div>
                 <button
                   type="submit"
                   className="btn-primary w-full"
-                  disabled={isAddingItem}
+                  disabled={editingItem ? isUpdatingItem : isAddingItem}
                 >
-                  {isAddingItem ? 'Adding...' : 'Add Item'}
+                  {editingItem
+                    ? isUpdatingItem
+                      ? 'Updating...'
+                      : 'Update Item'
+                    : isAddingItem
+                      ? 'Adding...'
+                      : 'Add Item'}
                 </button>
               </form>
             )}
@@ -310,14 +416,29 @@ const ManageStorefrontPage = () => {
                       <h3 className="font-semibold text-charcoal">{item.name}</h3>
                       <p className="mt-1 text-sm text-slate-500">{item.category}</p>
                       <p className="mt-2 text-lg font-bold text-primary">${item.price.toFixed(2)}</p>
+                      {item.quantity !== undefined && (
+                        <p className="mt-1 text-sm text-slate-600">
+                          Quantity: {item.quantity}
+                        </p>
+                      )}
                     </div>
                     <p className="flex-1 text-sm text-slate-600 line-clamp-2">
                       {item.description}
                     </p>
                     <div className="flex gap-2">
-                      <button className="btn-outline flex-1 text-sm">Edit</button>
-                      <button className="btn-outline flex-1 text-sm text-red-600 hover:bg-red-50">
-                        Delete
+                      <button
+                        onClick={() => handleEditItem(item)}
+                        className="btn-outline flex-1 text-sm"
+                        disabled={!!editingItem || isDeletingItem === item.id}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="btn-outline flex-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        disabled={!!editingItem || isDeletingItem === item.id}
+                      >
+                        {isDeletingItem === item.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
                   </div>
