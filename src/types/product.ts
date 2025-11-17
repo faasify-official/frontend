@@ -14,5 +14,7 @@ export type Product = {
   description: string
   averageRating: number
   reviews: Review[]
+  quantity?: number
+  storeId?: string
 }
 
