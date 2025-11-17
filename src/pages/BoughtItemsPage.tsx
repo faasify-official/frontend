@@ -2,30 +2,30 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@context/AuthContext";
 
-type OrderItemFromAPI = {
+type OrderFromAPI = {
     id: string;
-    name: string;
-    storeId: string;
-    price: number;
-    image?: string;
+    createdAt: string;
+    status: string;
+    items: {
+        itemId: string;
+        name: string;
+        image?: string;
+        description?: string;
+        price: number;
+        storeId: string;
+    }[];
 };
-
-type OrderFromApi = {
-    id: string;
-    createdAt: string;    // ISO string stored in DynamoDB
-    status: string;       // "PAID", "REFUNDED", etc.
-    items: OrderItemFromAPI[];
-}
 
 type BoughtItem = {
     orderId: string;
+    productId: string;
+    storeId: string;
+    name: string;
+    image?: string;
+    description?: string;
+    price: number;
     orderDate: string;
     orderStatus: string;
-    id: string;
-    name: string;
-    storeId: string;
-    price: number;
-    image?: string;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -38,44 +38,50 @@ export default function BoughtItemsPage() {
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchBoughtItems = async () => {
-            setLoading(true);
-            setError(null);
+    // Helper to convert "orders with items" -> flat list
+    function flattenOrders(orders: OrderFromAPI[]): BoughtItem[] {
+        return orders.flatMap((order) =>
+            order.items.map((item) => ({
+                orderId: order.id,
+                productId: item.itemId,
+                storeId: item.storeId,
+                name: item.name,
+                image: item.image,
+                description: item.description,
+                price: item.price,
+                orderDate: order.createdAt,
+                orderStatus: order.status,
+            }))
+        );
+    }
 
+    useEffect(() => {
+        async function fetchBoughtItems() {
             try {
+                setLoading(true);
+                setError(null);
+
                 const res = await fetch(`${API_BASE_URL}/orders`, {
+                    method: "GET",
                     headers: {
                         "Content-Type": "application/json",
                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     },
+                    credentials: "include",
                 });
 
                 if (!res.ok) {
-                    const text = await res.text();
-                    console.error("Failed to fetch orders:", text);
-                    setError("Failed to load bought items.");
-                    setItems([]);
-                    return;
+                    const body = await res.json().catch(() => ({}));
+                    console.error("Failed to fetch orders:", body);
+                    throw new Error(body.message || "Failed to load bought items.");
                 }
 
                 const data = await res.json();
-                const orders: OrderFromApi[] = data.orders ?? [];
+                const orders: OrderFromAPI[] = data.orders ?? [];
 
-                const flattened: BoughtItem[] = orders.flatMap((order) =>
-                    order.items.map((item) => ({
-                        orderId: order.id,
-                        orderDate: order.createdAt,
-                        orderStatus: order.status,
-                        id: item.id,
-                        name: item.name,
-                        storeId: item.storeId,
-                        price: item.price,
-                        image: item.image,
-                    }))
-                );
-
+                const flattened = flattenOrders(orders);
                 setItems(flattened);
+
             } catch (err) {
                 console.error("Error fetching orders:", err);
                 setError("An error occurred while loading bought items.");
@@ -87,16 +93,26 @@ export default function BoughtItemsPage() {
 
         if (token) {
             fetchBoughtItems();
+        } else {
+            setLoading(false);
+            setItems([]);
         }
 
     }, [token]);
 
 
     const handleReviewClick = (item: BoughtItem) => {
-        navigate(`/product/${item.id}/review`, {
-            state: { storeId: item.storeId },
-        });
-    }
+        if (!item.productId) {
+            console.error('Bought item is missing productId', item)
+            alert("This item cannot be reviewed because product info is missing.");
+            return
+        }
+
+
+        navigate(
+            `/product/${item.productId}/review?orderId=${encodeURIComponent(item.orderId)}`
+        );
+    };
 
     if (loading) {
         return <div className="p-8">Loading bought items...</div>;
@@ -119,7 +135,7 @@ export default function BoughtItemsPage() {
                 <div className="space-y-4">
                     {items.map((item) => (
                         <div
-                            key={`${item.orderId}-${item.id}`}
+                            key={`${item.orderId}-${item.productId}`}
                             className="rounded-xl border bg-white p-4 flex justify-between gap-4 items-center"
                         >
                             {/* Left section: image + basic info */}

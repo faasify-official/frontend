@@ -36,7 +36,7 @@ const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'create-account', element: <CreateAccountPage /> },
       { path: 'product/:id', element: <ProductDetailPage /> },
-      { path: 'product/:id/review', element: <ReviewItemPage /> },
+      { path: 'product/:productId/review', element: <ReviewItemPage /> },
       { path: 'storefront/:storeId', element: <StorefrontPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'checkout', element: <CheckoutWithStripe /> },
