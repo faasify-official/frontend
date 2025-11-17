@@ -20,7 +20,10 @@ type SearchContextValue = {
 
 const SearchContext = createContext<SearchContextValue | undefined>(undefined)
 
-const isStorefrontRoute = (pathname: string) => pathname.startsWith('/storefront/')
+const isStorefrontRoute = (pathname: string) => {
+  // Check if it's a specific storefront page (not the storefronts listing page)
+  return pathname.startsWith('/storefront/') && pathname !== '/storefronts'
+}
 
 export const SearchProvider = ({ children }: { children: ReactNode }) => {
   const location = useLocation()

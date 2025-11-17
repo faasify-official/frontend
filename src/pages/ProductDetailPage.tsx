@@ -1,9 +1,12 @@
-import { use, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, ArrowLeft, Heart } from 'lucide-react'
 import { products } from '@data/products'
 import ReviewBadge from '@components/ReviewBadge'
 import { useCart } from '@hooks/useCart'
+import { useAuth } from '@context/AuthContext'
+import { apiGet } from '@utils/api'
+import type { Product } from '../types/product'
 
 type Review = {
   reviewId: string
@@ -20,7 +23,11 @@ const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart()
+  const { isSeller } = useAuth()
 
+  const [product, setProduct] = useState<Product | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [productError, setProductError] = useState<string | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState<string | null>(null)
@@ -28,7 +35,6 @@ const ProductDetailPage = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_URL
 
-  const product = useMemo(() => products.find((item) => item.id === id), [id])
   const cartItem = product ? cartItems.find((item) => item.product.id === product.id) : undefined
   const quantity = cartItem?.quantity || 0
 
@@ -37,6 +43,42 @@ const ProductDetailPage = () => {
     const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
     return sum / reviews.length
   }, [reviews])
+
+  // Fetch product from API or mock data
+  useEffect(() => {
+    if (!id) {
+      setProductError('Product ID is required')
+      setIsLoading(false)
+      return
+    }
+
+    const fetchProduct = async () => {
+      setIsLoading(true)
+      setProductError(null)
+
+      // First, try to find in mock data (for demo products)
+      const mockProduct = products.find((item) => item.id === id)
+      if (mockProduct) {
+        setProduct(mockProduct)
+        setIsLoading(false)
+        return
+      }
+
+      // If not in mock data, try to fetch from API
+      try {
+        const response = await apiGet<{ item: Product }>(`/listings/${id}`)
+        setProduct(response.item)
+      } catch (err) {
+        console.error('Error fetching product:', err)
+        setProductError(err instanceof Error ? err.message : 'Failed to load product')
+        setProduct(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProduct()
+  }, [id])
 
   const handleQuantityChange = (newQuantity: number) => {
     if (!product) return
@@ -78,11 +120,20 @@ const ProductDetailPage = () => {
       }
     }
 
-    fetchReviews()
-  }, [id, API_BASE_URL])
+    if (product) {
+      fetchReviews()
+    }
+  }, [id, API_BASE_URL, product])
 
+  if (isLoading) {
+    return (
+      <section className="flex items-center justify-center py-12">
+        <p className="text-slate-500">Loading product...</p>
+      </section>
+    )
+  }
 
-  if (!product) {
+  if (productError || !product) {
     return (
       <section className="space-y-4">
         <p className="text-lg font-semibold text-charcoal">Product not found.</p>
@@ -125,85 +176,50 @@ const ProductDetailPage = () => {
           </button>
         </div>
 
-        {/* Product Details */}
-        <div className="animate-fade-in-right space-y-6">
-          {/* Header */}
-          <div className="space-y-4">
-            <div className="animate-stagger-1 flex items-center gap-3">
-              <ReviewBadge
-                rating={averageRating}
-                label={
-                  reviews.length > 0
-                    ? `(${reviews.length} reviews)`
-                    : '(No reviews yet)'
-                }
-              />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                {product.category}
-              </span>
-            </div>
-            <h1 className="animate-stagger-2 text-4xl font-extrabold text-charcoal leading-tight">
-              {product.name}
-            </h1>
-            <p className="animate-stagger-3 text-base text-slate-600 leading-relaxed">
-              {product.description}
-            </p>
-            <p className="animate-stagger-4 text-3xl font-bold text-primary">
-              ${product.price.toFixed(2)}
-            </p>
+{!isSeller && (
+  <div className="animate-stagger-5 space-y-3">
+    <div className="flex gap-3">
+      {quantity > 0 ? (
+        <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3 animate-button-hover">
+          <button
+            onClick={() => handleQuantityChange(quantity - 1)}
+            className="rounded-full p-2 transition hover:bg-primary/20"
+            aria-label="Decrease quantity"
+          >
+            <Minus size={20} className="text-primary" />
+          </button>
+
+          <div className="relative flex flex-1 items-center justify-center">
+            <ShoppingCart size={22} className="text-primary" />
+            <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+              {quantity}
+            </span>
           </div>
 
-          {/* Actions */}
-          <div className="animate-stagger-5 space-y-3">
-            <div className="flex gap-3">
-              {quantity > 0 ? (
-                <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3 animate-button-hover">
-                  <button
-                    onClick={() => handleQuantityChange(quantity - 1)}
-                    className="rounded-full p-2 transition hover:bg-primary/20"
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus size={20} className="text-primary" />
-                  </button>
-                  <div className="relative flex flex-1 items-center justify-center">
-                    <ShoppingCart size={22} className="text-primary" />
-                    <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
-                      {quantity}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleQuantityChange(quantity + 1)}
-                    className="rounded-full p-2 transition hover:bg-primary/20"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus size={20} className="text-primary" />
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
-                  <ShoppingCart size={20} />
-                  Add to Cart
-                </button>
-              )}
-              <Link to="/cart" className="btn-outline flex-1 text-center animate-button-hover flex items-center justify-center gap-2">
-                View Cart
-              </Link>
-            </div>
-          </div>
-
-          {/* Info Cards */}
-          <div className="animate-stagger-6 grid grid-cols-2 gap-3 pt-4">
-            <div className="rounded-xl bg-green-50 border border-green-100 p-4 hover:bg-green-100/50 transition-colors">
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">In Stock</p>
-              <p className="mt-1 text-lg font-bold text-green-900">Available</p>
-            </div>
-            <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 hover:bg-primary/10 transition-colors">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide">Free Shipping</p>
-              <p className="mt-1 text-lg font-bold text-primary">Included</p>
-            </div>
-          </div>
+          <button
+            onClick={() => handleQuantityChange(quantity + 1)}
+            className="rounded-full p-2 transition hover:bg-primary/20"
+            aria-label="Increase quantity"
+          >
+            <Plus size={20} className="text-primary" />
+          </button>
         </div>
-      </div>
+      ) : (
+        <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
+          <ShoppingCart size={20} />
+          Add to Cart
+        </button>
+      )}
+
+      <Link
+        to="/cart"
+        className="btn-outline flex-1 text-center animate-button-hover flex items-center justify-center gap-2"
+      >
+        View Cart
+      </Link>
+    </div>
+  </div>
+)}
 
       {/* Reviews Section */}
       <div className="animate-fade-in-up pt-8 border-t border-slate-200">
