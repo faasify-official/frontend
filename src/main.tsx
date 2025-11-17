@@ -6,6 +6,8 @@ import './index.css'
 import HomePage from '@pages/HomePage'
 import LoginPage from '@pages/LoginPage'
 import CreateAccountPage from '@pages/CreateAccountPage'
+import CreateStorefrontPage from '@pages/CreateStorefrontPage'
+import ManageStorefrontPage from '@pages/ManageStorefrontPage'
 import ProductDetailPage from '@pages/ProductDetailPage'
 import StorefrontPage from '@pages/StorefrontPage'
 import CartPage from '@pages/CartPage'
@@ -35,6 +37,8 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'create-account', element: <CreateAccountPage /> },
+      { path: 'create-storefront', element: <CreateStorefrontPage /> },
+      { path: 'manage-storefront', element: <ManageStorefrontPage /> },
       { path: 'product/:id', element: <ProductDetailPage /> },
       { path: 'product/:productId/review', element: <ReviewItemPage /> },
       { path: 'storefront/:storeId', element: <StorefrontPage /> },

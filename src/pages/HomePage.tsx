@@ -1,20 +1,53 @@
-import { useMemo } from 'react'
-import { storefronts } from '@data/storefronts'
+import { useState, useEffect, useRef } from 'react'
 import StorefrontCard from '@components/StorefrontCard'
-import { useSearch } from '@hooks/useSearch'
+import { apiGet } from '@utils/api'
+import type { Storefront } from '../types/storefront'
 
 const HomePage = () => {
-  const { query } = useSearch()
-  const normalizedQuery = query.trim().toLowerCase()
-  const filteredStorefronts = useMemo(() => {
-    if (!normalizedQuery) {
-      return storefronts
+  const [storefronts, setStorefronts] = useState<Storefront[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const fetchStorefronts = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const data = await apiGet<{ storefronts: Storefront[] }>('/storefronts')
+        // Limit to 12 storefronts
+        const limitedStorefronts = (data.storefronts || []).slice(0, 10)
+        setStorefronts(limitedStorefronts)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch storefronts')
+        setStorefronts([])
+      } finally {
+        setIsLoading(false)
+      }
     }
-    return storefronts.filter((storefront) => {
-      const haystack = `${storefront.name} ${storefront.description} ${storefront.category} ${storefront.owner}`.toLowerCase()
-      return haystack.includes(normalizedQuery)
-    })
-  }, [normalizedQuery])
+
+    fetchStorefronts()
+  }, [])
+
+  // Enable mouse wheel horizontal scrolling
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only handle vertical wheel scrolling
+      if (e.deltaY !== 0) {
+        e.preventDefault()
+        container.scrollLeft += e.deltaY
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel)
+    }
+  }, [storefronts])
 
   return (
     <section className="flex flex-col gap-10">
@@ -34,7 +67,7 @@ const HomePage = () => {
       <div className="flex flex-col gap-6">
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-charcoal">Sample storefronts</h2>
+            <h2 className="text-2xl font-semibold text-charcoal">Featured storefronts</h2>
             <p className="mt-1 text-sm text-slate-500">
               {normalizedQuery
                 ? `Showing ${filteredStorefronts.length} result${filteredStorefronts.length === 1 ? '' : 's'} for “${query}”.`
@@ -44,15 +77,30 @@ const HomePage = () => {
           <button className="btn-outline hidden sm:inline-flex">See all storefronts</button>
         </div>
 
-        {filteredStorefronts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
-            No storefronts match “{query}”. Try searching by storefront name, owner, or category.
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-slate-500">Loading storefronts...</p>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-red-500">Error: {error}</p>
+          </div>
+        ) : storefronts.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-slate-500">No storefronts available</p>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredStorefronts.map((storefront) => (
-              <StorefrontCard key={storefront.storeId} storefront={storefront} />
-            ))}
+          <div 
+            ref={scrollContainerRef}
+            className="overflow-x-auto pb-4 scrollbar-hide"
+          >
+            <div className="flex gap-6" style={{ minWidth: 'max-content' }}>
+              {storefronts.map((storefront) => (
+                <div key={storefront.storeId} className="flex-shrink-0" style={{ width: '320px' }}>
+                  <StorefrontCard storefront={storefront} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
