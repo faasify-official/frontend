@@ -134,9 +134,7 @@ const StorefrontPage = () => {
                 <div className="flex flex-col gap-1">
                     <h2 className="text-2xl font-semibold text-charcoal">All Items</h2>
                     <p className="text-sm text-slate-500">
-                        {normalizedQuery
-                            ? `Showing ${filteredProducts.length} result${filteredProducts.length === 1 ? '' : 's'} for “${query}”.`
-                            : `Browse all products available from ${storefront.name}`}
+                        Browse all products available from {storefront.name}
                     </p>
                 </div>
 

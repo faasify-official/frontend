@@ -10,6 +10,7 @@ import CreateStorefrontPage from '@pages/CreateStorefrontPage'
 import ManageStorefrontPage from '@pages/ManageStorefrontPage'
 import ProductDetailPage from '@pages/ProductDetailPage'
 import StorefrontPage from '@pages/StorefrontPage'
+import StorefrontsPage from '@pages/StorefrontsPage'
 import CartPage from '@pages/CartPage'
 import CheckoutPage from '@pages/CheckoutPage'
 import ProfilePage from '@pages/ProfilePage'
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: 'manage-storefront', element: <ManageStorefrontPage /> },
       { path: 'product/:id', element: <ProductDetailPage /> },
       { path: 'product/:productId/review', element: <ReviewItemPage /> },
+      { path: 'storefronts', element: <StorefrontsPage /> },
       { path: 'storefront/:storeId', element: <StorefrontPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'checkout', element: <CheckoutWithStripe /> },

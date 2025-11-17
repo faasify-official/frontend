@@ -6,6 +6,7 @@ import SearchBar from '@components/SearchBar'
 
 const navItems = [
   { label: 'Home', to: '/' },
+  { label: 'Stores', to: '/storefronts' },
   { label: 'Profile', to: '/profile' },
   { label: 'Purchases', to: '/purchases' },
 

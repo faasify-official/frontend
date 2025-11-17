@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import StorefrontCard from '@components/StorefrontCard'
 import { apiGet } from '@utils/api'
 import type { Storefront } from '../types/storefront'
@@ -69,12 +70,12 @@ const HomePage = () => {
           <div>
             <h2 className="text-2xl font-semibold text-charcoal">Featured storefronts</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {normalizedQuery
-                ? `Showing ${filteredStorefronts.length} result${filteredStorefronts.length === 1 ? '' : 's'} for “${query}”.`
-                : 'Browse storefronts and discover unique products from independent sellers.'}
+              Browse storefronts and discover unique products from independent sellers.
             </p>
           </div>
-          <button className="btn-outline hidden sm:inline-flex">See all storefronts</button>
+          <Link to="/storefronts" className="btn-outline hidden sm:inline-flex">
+            See all storefronts
+          </Link>
         </div>
 
         {isLoading ? (
@@ -90,7 +91,7 @@ const HomePage = () => {
             <p className="text-slate-500">No storefronts available</p>
           </div>
         ) : (
-          <div 
+          <div
             ref={scrollContainerRef}
             className="overflow-x-auto pb-4 scrollbar-hide"
           >
