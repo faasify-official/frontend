@@ -1,9 +1,12 @@
-import { use, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart } from 'lucide-react'
 import { products } from '@data/products'
 import ReviewBadge from '@components/ReviewBadge'
 import { useCart } from '@hooks/useCart'
+import { useAuth } from '@context/AuthContext'
+import { apiGet } from '@utils/api'
+import type { Product } from '../types/product'
 
 type Review = {
   reviewId: string
@@ -20,14 +23,17 @@ const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart()
+  const { isSeller } = useAuth()
 
+  const [product, setProduct] = useState<Product | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [productError, setProductError] = useState<string | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState<string | null>(null)
 
   const API_BASE_URL = import.meta.env.VITE_API_URL
 
-  const product = useMemo(() => products.find((item) => item.id === id), [id])
   const cartItem = product ? cartItems.find((item) => item.product.id === product.id) : undefined
   const quantity = cartItem?.quantity || 0
 
@@ -36,6 +42,42 @@ const ProductDetailPage = () => {
     const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
     return sum / reviews.length
   }, [reviews])
+
+  // Fetch product from API or mock data
+  useEffect(() => {
+    if (!id) {
+      setProductError('Product ID is required')
+      setIsLoading(false)
+      return
+    }
+
+    const fetchProduct = async () => {
+      setIsLoading(true)
+      setProductError(null)
+
+      // First, try to find in mock data (for demo products)
+      const mockProduct = products.find((item) => item.id === id)
+      if (mockProduct) {
+        setProduct(mockProduct)
+        setIsLoading(false)
+        return
+      }
+
+      // If not in mock data, try to fetch from API
+      try {
+        const response = await apiGet<{ item: Product }>(`/listings/${id}`)
+        setProduct(response.item)
+      } catch (err) {
+        console.error('Error fetching product:', err)
+        setProductError(err instanceof Error ? err.message : 'Failed to load product')
+        setProduct(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProduct()
+  }, [id])
 
   const handleQuantityChange = (newQuantity: number) => {
     if (!product) return
@@ -77,14 +119,25 @@ const ProductDetailPage = () => {
       }
     }
 
-    fetchReviews()
-  }, [id, API_BASE_URL])
+    if (product) {
+      fetchReviews()
+    }
+  }, [id, API_BASE_URL, product])
 
+  if (isLoading) {
+    return (
+      <section className="flex items-center justify-center py-12">
+        <p className="text-slate-500">Loading product...</p>
+      </section>
+    )
+  }
 
-  if (!product) {
+  if (productError || !product) {
     return (
       <section className="space-y-4">
-        <p className="text-lg font-semibold text-charcoal">Product not found.</p>
+        <p className="text-lg font-semibold text-charcoal">
+          {productError || 'Product not found.'}
+        </p>
         <button onClick={() => navigate(-1)} className="btn-outline">
           Go back
         </button>
@@ -115,39 +168,41 @@ const ProductDetailPage = () => {
           <p className="text-sm text-slate-600">{product.description}</p>
         </div>
 
-        <div className="flex gap-3">
-          {quantity > 0 ? (
-            <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3">
-              <button
-                onClick={() => handleQuantityChange(quantity - 1)}
-                className="rounded-full p-2 transition hover:bg-primary/20"
-                aria-label="Decrease quantity"
-              >
-                <Minus size={20} className="text-primary" />
-              </button>
-              <div className="relative flex flex-1 items-center justify-center">
-                <ShoppingCart size={22} className="text-primary" />
-                <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
-                  {quantity}
-                </span>
+        {!isSeller && (
+          <div className="flex gap-3">
+            {quantity > 0 ? (
+              <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3">
+                <button
+                  onClick={() => handleQuantityChange(quantity - 1)}
+                  className="rounded-full p-2 transition hover:bg-primary/20"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus size={20} className="text-primary" />
+                </button>
+                <div className="relative flex flex-1 items-center justify-center">
+                  <ShoppingCart size={22} className="text-primary" />
+                  <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+                    {quantity}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleQuantityChange(quantity + 1)}
+                  className="rounded-full p-2 transition hover:bg-primary/20"
+                  aria-label="Increase quantity"
+                >
+                  <Plus size={20} className="text-primary" />
+                </button>
               </div>
-              <button
-                onClick={() => handleQuantityChange(quantity + 1)}
-                className="rounded-full p-2 transition hover:bg-primary/20"
-                aria-label="Increase quantity"
-              >
-                <Plus size={20} className="text-primary" />
+            ) : (
+              <button onClick={() => addToCart(product)} className="btn-primary flex-1">
+                Add to Cart
               </button>
-            </div>
-          ) : (
-            <button onClick={() => addToCart(product)} className="btn-primary flex-1">
-              Add to Cart
-            </button>
-          )}
-          <Link to="/cart" className="btn-outline flex-1 text-center">
-            View Cart
-          </Link>
-        </div>
+            )}
+            <Link to="/cart" className="btn-outline flex-1 text-center">
+              View Cart
+            </Link>
+          </div>
+        )}
 
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-charcoal">Reviews</h2>
