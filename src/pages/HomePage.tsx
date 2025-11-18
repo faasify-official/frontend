@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import StorefrontCard from '@components/StorefrontCard'
+import ProductCard from '@components/ProductCard'
+import { products } from '@data/products'
 import { apiGet } from '@utils/api'
 import type { Storefront } from '../types/storefront'
 
@@ -50,23 +52,55 @@ const HomePage = () => {
     }
   }, [storefronts])
 
+  
+
   return (
-    <section className="flex flex-col gap-10">
-      <div className="rounded-3xl bg-gradient-to-r from-primary to-primary-dark px-8 py-12 text-white shadow-lg sm:px-12">
-        <div className="max-w-2xl space-y-4">
-          <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-            Your shop, simplified
+    <section className="flex flex-col gap-12">
+      {/* Hero */}
+      <div className="animate-fade-in-up grid gap-8 rounded-3xl bg-gradient-to-r from-primary to-primary-dark p-8 shadow-lg sm:grid-cols-2 sm:items-center">
+        <div className="space-y-4 text-white">
+          <span className="animate-slide-in-down inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+            Marketplace for builders
           </span>
-          <h1 className="text-4xl font-bold sm:text-5xl">Launch storefronts in minutes.</h1>
-          <p className="text-base text-white/80 sm:text-lg">
-            FaaSify lets you assemble and manage storefronts without the heavy lifting. Explore curated
-            templates and jumpstart your commerce presence today.
+          <h1 className="animate-stagger-1 text-3xl font-extrabold leading-tight sm:text-4xl">
+            Launch beautiful storefronts and sell fast.
+          </h1>
+          <p className="animate-stagger-2 text-sm text-white/90 sm:text-base">
+            Create, customize, and manage storefronts with a serverless backend. Curated templates and
+            powerful developer tools — everything you need to ship faster.
           </p>
+
+          <div className="mt-4 flex gap-3">
+            <Link to="/create-storefront" className="animate-stagger-3 btn-primary animate-button-hover">
+              Create a storefront
+            </Link>
+            <Link to="/manage-storefront" className="animate-stagger-4 btn-outline-light hidden sm:inline-flex animate-button-hover">
+              Manage storefronts
+            </Link>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3 text-xs text-white/80">
+            <span className="animate-stagger-4 rounded-full bg-white/10 px-3 py-1">No infra required</span>
+            <span className="animate-stagger-5 rounded-full bg-white/10 px-3 py-1">Built-in payments</span>
+            <span className="animate-stagger-6 rounded-full bg-white/10 px-3 py-1">Fast to launch</span>
+          </div>
+        </div>
+
+        <div className="animate-fade-in-right hidden sm:block">
+          <img
+            src="https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=1200&q=80"
+            alt="Storefront preview"
+            className="w-full rounded-2xl object-cover shadow-xl hover:shadow-2xl transition-shadow duration-300"
+            loading="lazy"
+          />
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="flex items-end justify-between">
+
+
+      {/* Storefronts */}
+      <div className="animate-fade-in-up space-y-4">
+        <div className="animate-stagger-3 flex items-end justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-charcoal">Featured storefronts</h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -93,7 +127,7 @@ const HomePage = () => {
         ) : (
           <div
             ref={scrollContainerRef}
-            className="overflow-x-auto pb-4 scrollbar-hide"
+            className="overflow-x-auto pb-4"
           >
             <div className="flex gap-6" style={{ minWidth: 'max-content' }}>
               {storefronts.map((storefront) => (

@@ -1,21 +1,21 @@
 import { Link, NavLink } from 'react-router-dom'
 import { ShoppingCart, Store } from 'lucide-react'
+import { useMemo } from 'react'
 import { useCart } from '@hooks/useCart'
 import { useAuth } from '@context/AuthContext'
-import SearchBar from '@components/SearchBar'
 
-const navItems = [
-  { label: 'Home', to: '/' },
-  { label: 'Stores', to: '/storefronts' },
-  { label: 'Profile', to: '/profile' },
-  { label: 'Purchases', to: '/purchases' },
-
-]
 
 const Navbar = () => {
   const { cartCount } = useCart()
   const { user, isAuthenticated, logout, isSeller } = useAuth()
   const hasStorefront = user?.hasStorefront === true
+
+  const navItems = useMemo(() => [
+    { label: 'Home', to: '/' },
+    { label: 'Stores', to: '/storefronts' },
+    { label: 'Profile', to: '/profile' },
+    { label: isSeller ? 'Orders' : 'Purchases', to: isSeller ? '/orders' : '/purchases' },
+  ], [isSeller])
 
   return (
     <header className="border-b border-slate-200 bg-white">

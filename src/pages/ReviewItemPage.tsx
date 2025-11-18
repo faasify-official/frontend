@@ -1,7 +1,8 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@context/AuthContext";
+import { Star, ArrowLeft } from "lucide-react";
 
 type ReviewRouteParams = {
     productId: string;
@@ -11,7 +12,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function ReviewItemPage() {
     const { productId } = useParams<ReviewRouteParams>();
-    const [searchParams] = useSearchParams()
+    const [searchParams] = useSearchParams();
     const orderId = searchParams.get("orderId") ?? undefined;
     const productName = searchParams.get("name") ?? "this service";
 
@@ -20,9 +21,12 @@ export default function ReviewItemPage() {
 
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
+    const [title, setTitle] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
-    // --- Submit handler -------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Submit handler (test-main logic)
+    // -------------------------------------------------------------------------
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -30,7 +34,6 @@ export default function ReviewItemPage() {
         if (!productId) return;
 
         if (rating < 1 || rating > 5) {
-            // Very simple client-side guard
             alert("Rating must be between 1 and 5.");
             return;
         }
@@ -39,10 +42,11 @@ export default function ReviewItemPage() {
             setSubmitting(true);
 
             const payload = {
-                productId,          // required by backend
-                rating,             // required by backend
-                comment: comment.trim(), // optional, backend can handle empty string
-                // storeId is resolved on the backend using productId + ItemsTable
+                productId,
+                rating,
+                title,
+                comment: comment.trim(),
+                // storeId removed — backend auto resolves it
             };
 
             const res = await fetch(`${API_BASE_URL}/reviews`, {
@@ -55,112 +59,138 @@ export default function ReviewItemPage() {
             });
 
             if (!res.ok) {
-                // Try to read JSON error from backend, but don't crash if it fails
-                let message = "Failed to submit review.";
+                let bodyText = "Failed to submit review.";
                 try {
-                    const body = await res.json();
-                    if (body && typeof body.error === "string") {
-                        message = body.error;
-                    }
+                    const data = await res.json();
+                    bodyText = data.error || data.message || JSON.stringify(data);
                 } catch {
-                    // ignore JSON parse error
+                    bodyText = await res.text();
                 }
 
-                console.error("Review submission failed", res.status, message);
-                alert(message);
+                console.error("Failed to submit review:", bodyText);
+                alert(`Failed to submit review: ${bodyText}`);
                 return;
             }
 
             alert("Thank you for your review!");
-
-            // After submitting, send the user back to the product detail page
-            navigate(`/purchases`);
+            navigate("/purchases");
         } catch (err) {
-            console.error("Unexpected error while submitting review", err);
-            alert("Unexpected error while submitting review. Please try again.");
+            console.error("Unexpected error submitting review:", err);
+            alert("Unexpected error submitting review. Please try again.");
         } finally {
             setSubmitting(false);
         }
     };
 
-
-
+    // -------------------------------------------------------------------------
+    // UI (Dipen frontend preserved)
+    // -------------------------------------------------------------------------
     return (
-        <section className="mx-auto max-w-3xl px-6 py-10">
-            <h1 className="mb-4 text-2xl font-semibold text-charcoal">Write a review</h1>
-
-            <p className="mb-2 text-sm text-slate-600">
-                You are reviewing: <span className="font-medium">{productName ?? 'this service'}</span>
-            </p>
-            {orderId && (
-                <p className="mb-6 text-xs text-slate-500">
-                    Order ID: {orderId}
+        <section className="max-w-2xl mx-auto px-6 py-10">
+            <div className="animate-fade-in-up mb-6">
+                <div className="flex items-center gap-4">
+                    <Link to="/purchases" className="text-slate-400 hover:text-charcoal">
+                        <ArrowLeft />
+                    </Link>
+                    <h1 className="text-3xl font-extrabold text-charcoal">Write a review</h1>
+                </div>
+                <p className="mt-2 text-sm text-slate-500">
+                    You are reviewing <span className="font-semibold">{productName}</span>
                 </p>
-            )}
+                {orderId && (
+                    <p className="text-xs text-slate-400 mt-1">Order ID: {orderId}</p>
+                )}
+                <p className="mt-2 text-sm text-slate-500">
+                    Share your experience to help others — your feedback matters.
+                </p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-                {/* Rating input */}
-                <div>
-                    <label
-                        htmlFor="rating"
-                        className="block text-sm font-medium text-charcoal"
-                    >
-                        Rating (1–5)
-                    </label>
-                    <input
-                        id="rating"
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={rating}
-                        onChange={(e) => setRating(Number(e.target.value) || 0)}
-                        className="mt-1 w-24 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                    />
-                    <p className="mt-1 text-xs text-slate-500">
-                        Please rate this service from 1 (worst) to 5 (best).
-                    </p>
-                </div>
+            <div className="card p-6 space-y-6 animate-fade-in-up">
+                <form onSubmit={handleSubmit} className="space-y-4">
 
-                {/* Comment input */}
-                <div>
-                    <label
-                        htmlFor="comment"
-                        className="block text-sm font-medium text-charcoal"
-                    >
-                        Comment
-                    </label>
-                    <textarea
-                        id="comment"
-                        rows={5}
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Share your experience with this service..."
-                        className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                    />
-                    <p className="mt-1 text-xs text-slate-500">
-                        Optional, but very helpful for other buyers.
-                    </p>
-                </div>
+                    {/* Title */}
+                    <div className="animate-stagger-1">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Review title
+                        </label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="Summarize your experience..."
+                            className="w-full rounded-md border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                    </div>
 
-                {/* Buttons */}
-                <div className="flex gap-3">
-                    <button
-                        type="submit"
-                        disabled={submitting}
-                        className="rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {submitting ? "Submitting..." : "Submit review"}
-                    </button>
+                    {/* Rating */}
+                    <div className="animate-stagger-1">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Rating
+                        </label>
+                        <div className="flex items-center gap-2">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                                <button
+                                    key={n}
+                                    type="button"
+                                    aria-label={`Set rating ${n}`}
+                                    aria-pressed={n <= rating}
+                                    onClick={() => setRating(n)}
+                                    className={`p-1 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                                        n <= rating ? "text-primary" : "text-slate-300 hover:text-slate-400"
+                                    }`}
+                                >
+                                    {n <= rating ? (
+                                        <svg
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="inline-block"
+                                        >
+                                            <path d="M12 .587l3.668 7.431L23.4 9.588l-5.7 5.557L19.335 24 12 19.77 4.665 24l1.636-8.855L.6 9.588l7.732-1.57L12 .587z" />
+                                        </svg>
+                                    ) : (
+                                        <Star size={20} />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => navigate(-1)}
-                        className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-charcoal hover:bg-slate-50"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </form>
+                    {/* Comment */}
+                    <div className="animate-stagger-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Comment
+                        </label>
+                        <textarea
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            className="w-full min-h-[120px] rounded-md border border-slate-200 px-4 py-3 resize-vertical focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            placeholder="Share what you liked or what could be improved..."
+                        />
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-end animate-stagger-3">
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="btn-primary px-4 py-2 flex items-center gap-2 disabled:opacity-50"
+                        >
+                            <span>{submitting ? "Submitting..." : "Submit review"}</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="btn-outline px-4 py-2"
+                            onClick={() => navigate(-1)}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
         </section>
     );
 }
+
