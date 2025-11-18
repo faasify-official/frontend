@@ -139,15 +139,12 @@ export default function BoughtItemsPage() {
                         <div>
                             <h1 className="text-4xl font-extrabold text-charcoal">Purchase History</h1>
                             <p className="mt-2 text-sm text-slate-500">
-                                {items.length === 0 
-                                    ? "View and manage all your purchases" 
+                                {items.length === 0
+                                    ? "View and manage all your purchases"
                                     : `You have purchased ${items.length} item${items.length !== 1 ? 's' : ''}`}
                             </p>
                         </div>
-                        <div className="hidden sm:flex items-center gap-3">
-                            <Link to="/" className="btn-outline px-3 py-2">Continue Shopping</Link>
-                            <Link to="/cart" className="btn-primary px-3 py-2">View Cart</Link>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -221,11 +218,10 @@ export default function BoughtItemsPage() {
                                     </div>
 
                                     <div className="mt-3 text-xs">
-                                        <span className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                                            item.orderStatus?.toUpperCase() === 'PAID'
+                                        <span className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-semibold border ${item.orderStatus?.toUpperCase() === 'PAID'
                                                 ? 'bg-green-50 text-green-700 border-green-200'
                                                 : 'bg-slate-50 text-slate-700 border-slate-200'
-                                        }`}
+                                            }`}
                                         >
                                             {item.orderStatus?.toUpperCase() === 'PAID' && (
                                                 <CheckCircle size={14} className="text-green-600" />
@@ -239,7 +235,7 @@ export default function BoughtItemsPage() {
                                 <div className="w-full sm:w-40 flex flex-col items-end gap-3">
                                     <div className="text-right">
                                         <div className="text-xs text-slate-500">Total</div>
-                                        <div className="text-lg font-bold text-primary">${(item.price / 100).toFixed(2)}</div>
+                                        <div className="text-lg font-bold text-primary">${item.price.toFixed(2)}</div>
                                     </div>
 
                                     <button

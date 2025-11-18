@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import StorefrontCard from '@components/StorefrontCard'
+import ProductCard from '@components/ProductCard'
+import { products } from '@data/products'
 import { apiGet } from '@utils/api'
 import type { Storefront } from '../types/storefront'
 
@@ -50,7 +52,7 @@ const HomePage = () => {
     }
   }, [storefronts])
 
-  const featuredProducts = products.slice(0, 6)
+  
 
   return (
     <section className="flex flex-col gap-12">
@@ -94,26 +96,7 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Featured products */}
-      <div className="animate-fade-in-up space-y-4">
-        <div className="animate-stagger-2 flex items-baseline justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-charcoal">Featured products</h2>
-            <p className="mt-1 text-sm text-slate-500">Handpicked items from our top storefronts.</p>
-          </div>
-          <Link to="/" className="text-sm text-primary hover:underline">
-            See all products
-          </Link>
-        </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-          {featuredProducts.map((product, idx) => (
-            <div key={product.id} className={`animate-stagger-${(idx % 6) + 1}`}>
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Storefronts */}
       <div className="animate-fade-in-up space-y-4">
@@ -144,7 +127,7 @@ const HomePage = () => {
         ) : (
           <div
             ref={scrollContainerRef}
-            className="overflow-x-auto pb-4 scrollbar-hide"
+            className="overflow-x-auto pb-4"
           >
             <div className="flex gap-6" style={{ minWidth: 'max-content' }}>
               {storefronts.map((storefront) => (

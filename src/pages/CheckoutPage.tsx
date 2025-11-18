@@ -110,7 +110,7 @@ const CheckoutPage = () => {
   
       if (paymentIntent?.status === 'succeeded') {
         showToast('Payment successful! 🎉', 'success')
-
+        console.log(cartItems.map((item) => item.product.storeId))
         // ⬇️ create order in backend DynamoDB
         await apiPost('/orders', {
           paymentIntentId: paymentIntent.id,
@@ -119,7 +119,7 @@ const CheckoutPage = () => {
           shippingInfo,              // full shipping object from your state
           items: cartItems.map((item) => ({
             itemId: item.product.id,
-            // storeId: item.product.storeId,
+            storeId: item.product.storeId,
             name: item.product.name,
             price: item.product.price,
             quantity: item.quantity,

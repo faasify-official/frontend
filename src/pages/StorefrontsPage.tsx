@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import StorefrontCard from '@components/StorefrontCard'
 import SearchBar from '@components/SearchBar'
 import { apiGet } from '@utils/api'
@@ -10,6 +10,7 @@ const StorefrontsPage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { query, clearQuery } = useSearch()
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const fetchStorefronts = async () => {
@@ -45,6 +46,7 @@ const StorefrontsPage = () => {
             return nameMatch || descriptionMatch || categoryMatch || ownerMatch
         })
     }, [storefronts, query])
+
 
     return (
         <section className="flex flex-col gap-8">
@@ -93,9 +95,12 @@ const StorefrontsPage = () => {
                                 : `Showing ${filteredStorefronts.length} storefront${filteredStorefronts.length === 1 ? '' : 's'}`}
                         </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" style={{ minWidth: 'max-content' }}>
                         {filteredStorefronts.map((storefront) => (
-                            <StorefrontCard key={storefront.storeId} storefront={storefront} />
+                            <div key={storefront.storeId} className="flex-shrink-0" style={{ width: '320px' }}>
+                                <StorefrontCard storefront={storefront} />
+                            </div>
                         ))}
                     </div>
                 </>

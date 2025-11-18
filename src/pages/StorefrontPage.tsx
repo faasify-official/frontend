@@ -4,6 +4,9 @@ import ProductCard from '@components/ProductCard'
 import { apiGet } from '@utils/api'
 import { storefronts as mockStorefronts } from '@data/storefronts'
 import { products as mockProducts } from '@data/products'
+import { useAuth } from '@context/AuthContext'
+import { useSubscription } from '../hooks/useSubscription'
+import { useToast } from '@context/ToastContext'
 import type { Storefront } from '../types/storefront'
 import type { Product } from '../types/product'
 
@@ -16,6 +19,27 @@ const StorefrontPage = () => {
     const [items, setItems] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const { isBuyer } = useAuth()
+    const { isSubscribed, isLoading: isSubscriptionLoading, isChecking, subscribe, unsubscribe } = useSubscription(storeId || '')
+    const { showToast } = useToast()
+
+    const handleSubscribe = async () => {
+        try {
+            await subscribe()
+            showToast('Successfully subscribed to storefront!', 'success')
+        } catch (error: any) {
+            showToast(error.message || 'Failed to subscribe', 'error')
+        }
+    }
+
+    const handleUnsubscribe = async () => {
+        try {
+            await unsubscribe()
+            showToast('Successfully unsubscribed from storefront', 'success')
+        } catch (error: any) {
+            showToast(error.message || 'Failed to unsubscribe', 'error')
+        }
+    }
 
     useEffect(() => {
         const fetchStorefrontData = async () => {
@@ -126,6 +150,20 @@ const StorefrontPage = () => {
                         <span>•</span>
                         <span>{items.length} {items.length === 1 ? 'item' : 'items'}</span>
                     </div>
+                    {isBuyer && !isChecking && storeId && (
+                        <div className="pt-4">
+                            <button
+                                onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
+                                disabled={isSubscriptionLoading}
+                                className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all ${isSubscribed
+                                        ? 'bg-white/20 text-white border-2 border-white/30 hover:bg-white/30 hover:border-white/50'
+                                        : 'bg-white text-primary hover:bg-white/95'
+                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                                {isSubscriptionLoading ? 'Loading...' : isSubscribed ? 'Unsubscribe' : 'Subscribe'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

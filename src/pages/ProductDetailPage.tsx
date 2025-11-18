@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, ArrowLeft, Heart } from 'lucide-react'
 import { products } from '@data/products'
@@ -33,16 +33,8 @@ const ProductDetailPage = () => {
   const [reviewsError, setReviewsError] = useState<string | null>(null)
   const [isWishlisted, setIsWishlisted] = useState(false)
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL
-
   const cartItem = product ? cartItems.find((item) => item.product.id === product.id) : undefined
   const quantity = cartItem?.quantity || 0
-
-  const averageRating = useMemo(() => {
-    if (!reviews.length) return 0
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
-    return sum / reviews.length
-  }, [reviews])
 
   // Fetch product from API or mock data
   useEffect(() => {
@@ -100,30 +92,20 @@ const ProductDetailPage = () => {
       setReviewsError(null)
 
       try {
-        const res = await fetch(`${API_BASE_URL}/reviews/product/${id}`)
-        if (!res.ok) {
-          const text = await res.text()
-          console.error('Failed to fetch reviews:', text)
-          setReviewsError('Using sample reviews')
-          // Keep hardcoded reviews as fallback
-          return
-        }
-
-        const data = await res.json()
+        const data = await apiGet<{ reviews: Review[] }>(`/reviews/product/${id}`)
         setReviews(data.reviews ?? [])
       } catch (err) {
         console.error('Error fetching reviews:', err)
-        setReviewsError('Using sample reviews')
-        // Keep hardcoded reviews as fallback
+        // If reviews endpoint fails, just show empty state
+        setReviews([])
+        setReviewsError(null)
       } finally {
         setReviewsLoading(false)
       }
     }
 
-    if (product) {
-      fetchReviews()
-    }
-  }, [id, API_BASE_URL, product])
+    fetchReviews()
+  }, [id])
 
   if (isLoading) {
     return (
@@ -176,50 +158,60 @@ const ProductDetailPage = () => {
           </button>
         </div>
 
-{!isSeller && (
-  <div className="animate-stagger-5 space-y-3">
-    <div className="flex gap-3">
-      {quantity > 0 ? (
-        <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3 animate-button-hover">
-          <button
-            onClick={() => handleQuantityChange(quantity - 1)}
-            className="rounded-full p-2 transition hover:bg-primary/20"
-            aria-label="Decrease quantity"
-          >
-            <Minus size={20} className="text-primary" />
-          </button>
-
-          <div className="relative flex flex-1 items-center justify-center">
-            <ShoppingCart size={22} className="text-primary" />
-            <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
-              {quantity}
-            </span>
+        {/* Product Details and Cart Controls */}
+        <div className="animate-fade-in-right space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-charcoal mb-2">{product.name}</h1>
+            <p className="text-2xl font-semibold text-primary mb-4">${product.price.toFixed(2)}</p>
+            <p className="text-slate-600 leading-relaxed">{product.description}</p>
           </div>
 
-          <button
-            onClick={() => handleQuantityChange(quantity + 1)}
-            className="rounded-full p-2 transition hover:bg-primary/20"
-            aria-label="Increase quantity"
-          >
-            <Plus size={20} className="text-primary" />
-          </button>
-        </div>
-      ) : (
-        <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
-          <ShoppingCart size={20} />
-          Add to Cart
-        </button>
-      )}
+          {!isSeller && (
+            <div className="animate-stagger-5 space-y-3">
+              <div className="flex gap-3">
+                {quantity > 0 ? (
+                  <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3 animate-button-hover">
+                    <button
+                      onClick={() => handleQuantityChange(quantity - 1)}
+                      className="rounded-full p-2 transition hover:bg-primary/20"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={20} className="text-primary" />
+                    </button>
 
-      <Link
-        to="/cart"
-        className="btn-outline flex-1 text-center animate-button-hover flex items-center justify-center gap-2"
-      >
-        View Cart
-      </Link>
-    </div>
-  </div>
-)}
+                    <div className="relative flex flex-1 items-center justify-center">
+                      <ShoppingCart size={22} className="text-primary" />
+                      <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+                        {quantity}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleQuantityChange(quantity + 1)}
+                      className="rounded-full p-2 transition hover:bg-primary/20"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={20} className="text-primary" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
+                    <ShoppingCart size={20} />
+                    Add to Cart
+                  </button>
+                )}
+
+                <Link
+                  to="/cart"
+                  className="btn-outline flex-1 text-center animate-button-hover flex items-center justify-center gap-2"
+                >
+                  View Cart
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Reviews Section */}
       <div className="animate-fade-in-up pt-8 border-t border-slate-200">
