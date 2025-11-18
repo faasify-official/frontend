@@ -24,7 +24,6 @@ const ManageStorefrontPage = () => {
   const [itemName, setItemName] = useState('')
   const [itemDescription, setItemDescription] = useState('')
   const [itemPrice, setItemPrice] = useState('')
-  const [itemCategory, setItemCategory] = useState('')
   const [itemImage, setItemImage] = useState('')
   const [itemQuantity, setItemQuantity] = useState('')
 
@@ -72,7 +71,6 @@ const ManageStorefrontPage = () => {
     setItemName('')
     setItemDescription('')
     setItemPrice('')
-    setItemCategory('')
     setItemImage('')
     setItemQuantity('')
     setEditingItem(null)
@@ -91,7 +89,7 @@ const ManageStorefrontPage = () => {
         name: itemName,
         description: itemDescription,
         price: parseFloat(itemPrice),
-        category: itemCategory,
+        category: 'General',
         image: itemImage || '',
         quantity: itemQuantity ? parseInt(itemQuantity, 10) : 0,
         storeId: selectedStorefront.storeId,
@@ -106,14 +104,13 @@ const ManageStorefrontPage = () => {
     } finally {
       setIsAddingItem(false)
     }
-  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemCategory, itemImage, itemQuantity, resetForm])
+  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemImage, itemQuantity, resetForm])
 
   const handleEditItem = useCallback((item: Product) => {
     setEditingItem(item)
     setItemName(item.name)
     setItemDescription(item.description)
     setItemPrice(item.price.toString())
-    setItemCategory(item.category)
     setItemImage(item.image)
     setItemQuantity((item.quantity || 0).toString())
     setShowAddItemForm(false)
@@ -131,7 +128,7 @@ const ManageStorefrontPage = () => {
         name: itemName,
         description: itemDescription,
         price: parseFloat(itemPrice),
-        category: itemCategory,
+        category: editingItem.category || 'General',
         image: itemImage || '',
         quantity: itemQuantity ? parseInt(itemQuantity, 10) : 0,
       })
@@ -147,7 +144,7 @@ const ManageStorefrontPage = () => {
     } finally {
       setIsUpdatingItem(false)
     }
-  }, [editingItem, itemName, itemDescription, itemPrice, itemCategory, itemImage, itemQuantity, resetForm])
+  }, [editingItem, itemName, itemDescription, itemPrice, itemImage, itemQuantity, resetForm])
 
   const handleDeleteItem = useCallback(async (itemId: string) => {
     if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
@@ -343,31 +340,17 @@ const ManageStorefrontPage = () => {
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-600">
-                      Category <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={itemCategory}
-                      onChange={(e) => setItemCategory(e.target.value)}
-                      required
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-600">Quantity</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      placeholder="0"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-600">Quantity</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={itemQuantity}
+                    onChange={(e) => setItemQuantity(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="0"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-600">Image URL</label>
