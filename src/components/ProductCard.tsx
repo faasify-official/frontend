@@ -17,12 +17,22 @@ const ProductCard = ({ product }: Props) => {
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) {
       removeFromCart(product.id)
-    } else if (quantity === 0) {
-      addToCart(product)
     } else {
-      updateQuantity(product.id, newQuantity)
+      const availableQuantity = product.quantity ?? Infinity
+      if (availableQuantity < newQuantity) {
+        return // Error will be shown by updateQuantity
+      }
+      if (quantity === 0) {
+        addToCart(product)
+      } else {
+        updateQuantity(product.id, newQuantity)
+      }
     }
   }
+
+  const availableQuantity = product.quantity ?? Infinity
+  const isLowStock = availableQuantity < 5 && availableQuantity > 0
+  const isOutOfStock = availableQuantity === 0
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md">
@@ -33,10 +43,20 @@ const ProductCard = ({ product }: Props) => {
           className="h-56 w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
           <span className="rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
             {product.category}
           </span>
+          {isLowStock && (
+            <span className="rounded-full bg-orange-500/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              Selling out soon
+            </span>
+          )}
+          {isOutOfStock && (
+            <span className="rounded-full bg-red-500/90 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              Out of stock
+            </span>
+          )}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-5">
@@ -50,7 +70,14 @@ const ProductCard = ({ product }: Props) => {
         <div className="flex gap-2 pt-2">
           {!isSeller && (
             <>
-              {quantity > 0 ? (
+              {isOutOfStock ? (
+                <button
+                  disabled
+                  className="btn-outline flex-1 text-sm font-medium opacity-50 cursor-not-allowed"
+                >
+                  Out of Stock
+                </button>
+              ) : quantity > 0 ? (
                 <div className="flex flex-1 items-center gap-2 rounded-full border border-primary bg-primary/10">
                   <button
                     onClick={() => handleQuantityChange(quantity - 1)}
@@ -67,7 +94,8 @@ const ProductCard = ({ product }: Props) => {
                   </div>
                   <button
                     onClick={() => handleQuantityChange(quantity + 1)}
-                    className="p-2 transition hover:bg-primary/20"
+                    disabled={quantity >= availableQuantity}
+                    className="p-2 transition hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Increase quantity"
                   >
                     <Plus size={16} className="text-primary" />

@@ -35,7 +35,7 @@ const CheckoutPage = () => {
       [e.target.name]: e.target.value,
     }))
   }
-  
+
   // const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   //   setPaymentInfo((prev) => ({
   //     ...prev,
@@ -57,24 +57,24 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-  
+
     if (!stripe || !elements) {
       showToast('Stripe is not ready yet. Please try again.', 'error')
       return
     }
-  
+
     const cardNumberElement = elements.getElement(CardNumberElement)
     if (!cardNumberElement) {
       showToast('Payment form is not ready.', 'error')
       return
     }
-  
+
     setIsProcessing(true)
-  
+
     try {
       // Convert cart total (e.g. 98.99) to cents
       const amountInCents = Math.round(total * 100)
-  
+
       // Ask your backend to create a PaymentIntent
       const { clientSecret } = await apiPost<{ clientSecret: string }>(
         '/payments/create-payment-intent',
@@ -84,7 +84,7 @@ const CheckoutPage = () => {
           currency: 'cad',
         },
       )
-  
+
       // Confirm the payment with Stripe using the card input
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
@@ -101,35 +101,43 @@ const CheckoutPage = () => {
           },
         },
       })
-  
+
       if (error) {
         console.error(error)
         showToast(error.message || 'Payment failed. Please try again.', 'error')
         return
       }
-  
+
       if (paymentIntent?.status === 'succeeded') {
         showToast('Payment successful! 🎉', 'success')
         console.log(cartItems.map((item) => item.product.storeId))
-        // ⬇️ create order in backend DynamoDB
-        await apiPost('/orders', {
-          paymentIntentId: paymentIntent.id,
-          amount: amountInCents,
-          currency: 'cad',           // or 'cad'
-          shippingInfo,              // full shipping object from your state
-          items: cartItems.map((item) => ({
-            itemId: item.product.id,
-            storeId: item.product.storeId,
-            name: item.product.name,
-            price: item.product.price,
-            quantity: item.quantity,
-            image: item.product.image,
-          })),
-        }).catch((err) => {
+        // ⬇️ create order in backend DynamoDB (this will reduce quantities in DB)
+        try {
+          await apiPost('/orders', {
+            paymentIntentId: paymentIntent.id,
+            amount: amountInCents,
+            currency: 'cad',           // or 'cad'
+            shippingInfo,              // full shipping object from your state
+            items: cartItems.map((item) => ({
+              itemId: item.product.id,
+              storeId: item.product.storeId,
+              name: item.product.name,
+              price: item.product.price,
+              quantity: item.quantity,
+              image: item.product.image,
+            })),
+          })
+
+          // Dispatch custom event to refresh product data across the app
+          window.dispatchEvent(new CustomEvent('orderCompleted', {
+            detail: { itemIds: cartItems.map(item => item.product.id) }
+          }))
+        } catch (err) {
           console.error(err)
           showToast('Something went wrong while creating order.', 'error')
-        })
-  
+          return
+        }
+
         // Clear cart and redirect
         clearCart()
         navigate('/cart', { state: { orderPlaced: true } })
@@ -143,7 +151,7 @@ const CheckoutPage = () => {
       setIsProcessing(false)
     }
   }
-  
+
   if (cartItems.length === 0) {
     return (
       <section className="space-y-8">
@@ -344,7 +352,7 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-         {/* Payment Information */}
+          {/* Payment Information */}
           <div className="animate-stagger-2 card space-y-5">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">

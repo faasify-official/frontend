@@ -82,6 +82,18 @@ export const CartProvider = ({ children }: Props) => {
       cartItems: state.items,
       addToCart: (product: Product) => {
         const existingItem = state.items.find((item) => item.product.id === product.id)
+        const currentCartQuantity = existingItem?.quantity || 0
+        const requestedQuantity = currentCartQuantity + 1
+        const availableQuantity = product.quantity ?? Infinity
+
+        if (availableQuantity < requestedQuantity) {
+          showToast(
+            `Only ${availableQuantity} ${availableQuantity === 1 ? 'item' : 'items'} available in stock for ${product.name}`,
+            'error'
+          )
+          return
+        }
+
         dispatch({ type: 'ADD', payload: product })
         if (existingItem) {
           showToast(`${product.name} quantity updated in cart!`, 'success')
@@ -90,8 +102,21 @@ export const CartProvider = ({ children }: Props) => {
         }
       },
       removeFromCart: (productId: string) => dispatch({ type: 'REMOVE', payload: productId }),
-      updateQuantity: (productId: string, quantity: number) =>
-        dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } }),
+      updateQuantity: (productId: string, quantity: number) => {
+        const item = state.items.find((item) => item.product.id === productId)
+        if (!item) return
+
+        const availableQuantity = item.product.quantity ?? Infinity
+        if (availableQuantity < quantity) {
+          showToast(
+            `Only ${availableQuantity} ${availableQuantity === 1 ? 'item' : 'items'} available in stock`,
+            'error'
+          )
+          return
+        }
+
+        dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } })
+      },
       clearCart: () => dispatch({ type: 'CLEAR' }),
       cartCount,
       total,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import ProductCard from '@components/ProductCard'
 import { apiGet } from '@utils/api'
@@ -41,22 +41,49 @@ const StorefrontPage = () => {
         }
     }
 
-    useEffect(() => {
-        const fetchStorefrontData = async () => {
-            if (!storeId) {
-                setError('Store ID is required')
+    const fetchStorefrontData = useCallback(async () => {
+        if (!storeId) {
+            setError('Store ID is required')
+            setIsLoading(false)
+            return
+        }
+
+        setIsLoading(true)
+        setError(null)
+
+        // Check if this is a mock store
+        const isMockStore = MOCK_STORE_IDS.includes(storeId)
+
+        if (isMockStore) {
+            // Use mock data for demo stores
+            const mockStorefront = mockStorefronts.find((s) => s.storeId === storeId)
+            if (mockStorefront) {
+                const mockItems = mockStorefront.items
+                    .map((productId) => mockProducts.find((p) => p.id === productId))
+                    .filter((product): product is Product => product !== undefined)
+
+                setStorefront(mockStorefront)
+                setItems(mockItems)
                 setIsLoading(false)
                 return
             }
+        }
 
-            setIsLoading(true)
-            setError(null)
+        // Try to fetch from API
+        try {
+            // Fetch storefront and items in parallel
+            const [storefrontResponse, itemsResponse] = await Promise.all([
+                apiGet<{ storefront: Storefront }>(`/storefronts/${storeId}`),
+                apiGet<{ items: Product[] }>(`/listings?storeId=${storeId}`),
+            ])
 
-            // Check if this is a mock store
-            const isMockStore = MOCK_STORE_IDS.includes(storeId)
+            setStorefront(storefrontResponse.storefront)
+            setItems(itemsResponse.items || [])
+        } catch (err) {
+            console.error('Error fetching storefront data:', err)
 
+            // Fallback to mock data if API fails and it's a known mock store
             if (isMockStore) {
-                // Use mock data for demo stores
                 const mockStorefront = mockStorefronts.find((s) => s.storeId === storeId)
                 if (mockStorefront) {
                     const mockItems = mockStorefront.items
@@ -70,42 +97,28 @@ const StorefrontPage = () => {
                 }
             }
 
-            // Try to fetch from API
-            try {
-                // Fetch storefront and items in parallel
-                const [storefrontResponse, itemsResponse] = await Promise.all([
-                    apiGet<{ storefront: Storefront }>(`/storefronts/${storeId}`),
-                    apiGet<{ items: Product[] }>(`/listings?storeId=${storeId}`),
-                ])
+            setError(err instanceof Error ? err.message : 'Failed to load storefront')
+        } finally {
+            setIsLoading(false)
+        }
+    }, [storeId])
 
-                setStorefront(storefrontResponse.storefront)
-                setItems(itemsResponse.items || [])
-            } catch (err) {
-                console.error('Error fetching storefront data:', err)
+    useEffect(() => {
+        fetchStorefrontData()
+    }, [fetchStorefrontData])
 
-                // Fallback to mock data if API fails and it's a known mock store
-                if (isMockStore) {
-                    const mockStorefront = mockStorefronts.find((s) => s.storeId === storeId)
-                    if (mockStorefront) {
-                        const mockItems = mockStorefront.items
-                            .map((productId) => mockProducts.find((p) => p.id === productId))
-                            .filter((product): product is Product => product !== undefined)
-
-                        setStorefront(mockStorefront)
-                        setItems(mockItems)
-                        setIsLoading(false)
-                        return
-                    }
-                }
-
-                setError(err instanceof Error ? err.message : 'Failed to load storefront')
-            } finally {
-                setIsLoading(false)
-            }
+    // Listen for order completion to refresh product data
+    useEffect(() => {
+        const handleOrderCompleted = () => {
+            // Refresh storefront items to get updated quantities
+            fetchStorefrontData()
         }
 
-        fetchStorefrontData()
-    }, [storeId])
+        window.addEventListener('orderCompleted', handleOrderCompleted as EventListener)
+        return () => {
+            window.removeEventListener('orderCompleted', handleOrderCompleted as EventListener)
+        }
+    }, [fetchStorefrontData])
 
     if (isLoading) {
         return (

@@ -127,12 +127,18 @@ const CartPage = () => {
                       </span>
                       <button
                         onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
-                        className="rounded p-1.5 transition hover:bg-slate-100"
+                        disabled={(item.product.quantity ?? Infinity) <= item.quantity}
+                        className="rounded p-1.5 transition hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Increase quantity"
                       >
                         <Plus size={16} className="text-slate-600" />
                       </button>
                     </div>
+                    {(item.product.quantity ?? Infinity) < 5 && (item.product.quantity ?? 0) > 0 && (
+                      <span className="text-xs text-orange-600 font-medium">
+                        Only {item.product.quantity} left
+                      </span>
+                    )}
                     <button
                       onClick={() => removeFromCart(item.product.id)}
                       className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"

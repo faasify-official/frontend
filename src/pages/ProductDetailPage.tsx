@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, ArrowLeft, Heart } from 'lucide-react'
 import { products } from '@data/products'
@@ -37,51 +37,75 @@ const ProductDetailPage = () => {
   const quantity = cartItem?.quantity || 0
 
   // Fetch product from API or mock data
-  useEffect(() => {
+  const fetchProduct = useCallback(async () => {
     if (!id) {
       setProductError('Product ID is required')
       setIsLoading(false)
       return
     }
 
-    const fetchProduct = async () => {
-      setIsLoading(true)
-      setProductError(null)
+    setIsLoading(true)
+    setProductError(null)
 
-      // First, try to find in mock data (for demo products)
-      const mockProduct = products.find((item) => item.id === id)
-      if (mockProduct) {
-        setProduct(mockProduct)
-        setIsLoading(false)
-        return
-      }
+    // First, try to find in mock data (for demo products)
+    const mockProduct = products.find((item) => item.id === id)
+    if (mockProduct) {
+      setProduct(mockProduct)
+      setIsLoading(false)
+      return
+    }
 
-      // If not in mock data, try to fetch from API
-      try {
-        const response = await apiGet<{ item: Product }>(`/listings/${id}`)
-        setProduct(response.item)
-      } catch (err) {
-        console.error('Error fetching product:', err)
-        setProductError(err instanceof Error ? err.message : 'Failed to load product')
-        setProduct(null)
-      } finally {
-        setIsLoading(false)
+    // If not in mock data, try to fetch from API
+    try {
+      const response = await apiGet<{ item: Product }>(`/listings/${id}`)
+      setProduct(response.item)
+    } catch (err) {
+      console.error('Error fetching product:', err)
+      setProductError(err instanceof Error ? err.message : 'Failed to load product')
+      setProduct(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    fetchProduct()
+  }, [fetchProduct])
+
+  // Listen for order completion to refresh product data
+  useEffect(() => {
+    const handleOrderCompleted = (event: CustomEvent) => {
+      if (id && event.detail?.itemIds?.includes(id)) {
+        // Refresh this product if it was in the order
+        fetchProduct()
       }
     }
 
-    fetchProduct()
-  }, [id])
+    window.addEventListener('orderCompleted', handleOrderCompleted as EventListener)
+    return () => {
+      window.removeEventListener('orderCompleted', handleOrderCompleted as EventListener)
+    }
+  }, [id, fetchProduct])
 
   const handleQuantityChange = (newQuantity: number) => {
     if (!product) return
     if (newQuantity < 1) {
       removeFromCart(product.id)
-    } else if (quantity === 0) {
-      addToCart(product)
     } else {
-      updateQuantity(product.id, newQuantity)
+      const availableQuantity = product.quantity ?? Infinity
+      if (availableQuantity < newQuantity) {
+        return // Error will be shown by updateQuantity
+      }
+      if (quantity === 0) {
+        addToCart(product)
+      } else {
+        updateQuantity(product.id, newQuantity)
+      }
     }
   }
+
+  const availableQuantity = product?.quantity ?? Infinity
+  const isOutOfStock = availableQuantity === 0
 
   // Fetch reviews for this product from the backend
   useEffect(() => {
@@ -147,6 +171,18 @@ const ProductDetailPage = () => {
             alt={product.name}
             className="relative h-full w-full rounded-3xl object-cover shadow-lg hover:shadow-2xl transition-shadow duration-300"
           />
+          <div className="absolute top-4 left-4 flex flex-col gap-2">
+            {(product.quantity ?? Infinity) < 5 && (product.quantity ?? 0) > 0 && (
+              <span className="rounded-full bg-orange-500/90 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm shadow-md">
+                Selling out soon ({product.quantity} left)
+              </span>
+            )}
+            {(product.quantity ?? 0) === 0 && (
+              <span className="rounded-full bg-red-500/90 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm shadow-md">
+                Out of stock
+              </span>
+            )}
+          </div>
           {!isSeller && (
             <button
               onClick={() => setIsWishlisted(!isWishlisted)}
@@ -170,46 +206,58 @@ const ProductDetailPage = () => {
 
           {!isSeller && (
             <div className="animate-stagger-5 space-y-3">
-              <div className="flex gap-3">
-                {quantity > 0 ? (
-                  <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3 animate-button-hover">
-                    <button
-                      onClick={() => handleQuantityChange(quantity - 1)}
-                      className="rounded-full p-2 transition hover:bg-primary/20"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus size={20} className="text-primary" />
-                    </button>
+              {isOutOfStock ? (
+                <div className="rounded-xl border-2 border-red-200 bg-red-50 p-4">
+                  <p className="text-sm font-semibold text-red-700 text-center">This item is currently out of stock</p>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  {quantity > 0 ? (
+                    <div className="flex flex-1 items-center gap-3 rounded-full border-2 border-primary bg-primary/10 px-4 py-3 animate-button-hover">
+                      <button
+                        onClick={() => handleQuantityChange(quantity - 1)}
+                        className="rounded-full p-2 transition hover:bg-primary/20"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus size={20} className="text-primary" />
+                      </button>
 
-                    <div className="relative flex flex-1 items-center justify-center">
-                      <ShoppingCart size={22} className="text-primary" />
-                      <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
-                        {quantity}
-                      </span>
+                      <div className="relative flex flex-1 items-center justify-center">
+                        <ShoppingCart size={22} className="text-primary" />
+                        <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
+                          {quantity}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleQuantityChange(quantity + 1)}
+                        disabled={quantity >= availableQuantity}
+                        className="rounded-full p-2 transition hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus size={20} className="text-primary" />
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => handleQuantityChange(quantity + 1)}
-                      className="rounded-full p-2 transition hover:bg-primary/20"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus size={20} className="text-primary" />
+                  ) : (
+                    <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
+                      <ShoppingCart size={20} />
+                      Add to Cart
                     </button>
-                  </div>
-                ) : (
-                  <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
-                    <ShoppingCart size={20} />
-                    Add to Cart
-                  </button>
-                )}
+                  )}
 
-                <Link
-                  to="/cart"
-                  className="btn-outline flex-1 text-center animate-button-hover flex items-center justify-center gap-2"
-                >
-                  View Cart
-                </Link>
-              </div>
+                  <Link
+                    to="/cart"
+                    className="btn-outline flex-1 text-center animate-button-hover flex items-center justify-center gap-2"
+                  >
+                    View Cart
+                  </Link>
+                </div>
+              )}
+              {availableQuantity < Infinity && availableQuantity > 0 && (
+                <p className="text-xs text-slate-500 text-center">
+                  {availableQuantity} {availableQuantity === 1 ? 'item' : 'items'} available in stock
+                </p>
+              )}
             </div>
           )}
         </div>
