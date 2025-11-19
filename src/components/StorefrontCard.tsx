@@ -38,9 +38,9 @@ const StorefrontCard = ({ storefront }: Props) => {
     return (
         <Link
             to={`/storefront/${storefront.storeId}`}
-            className="group flex flex-col overflow-hidden rounded-3xl border-2 border-slate-100 bg-white shadow-lg transition-all hover:border-primary/20 hover:shadow-xl"
+            className="group flex h-full flex-col overflow-hidden rounded-3xl border-2 border-slate-100 bg-white shadow-lg transition-all hover:border-primary/20 hover:shadow-xl"
         >
-            <div className="relative h-52 overflow-hidden">
+            <div className="relative h-48 overflow-hidden">
                 <img
                     src={storefront.image}
                     alt={storefront.name}
@@ -54,17 +54,17 @@ const StorefrontCard = ({ storefront }: Props) => {
                     </span>
                 </div>
             </div>
-            <div className="flex flex-1 flex-col gap-4 p-6">
-                <div>
-                    <h3 className="text-xl font-bold text-charcoal">{storefront.name}</h3>
-                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-600">
+            <div className="flex h-full flex-col gap-4 p-6">
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-xl font-bold text-charcoal line-clamp-1">{storefront.name}</h3>
+                    <p className="h-12 line-clamp-2 text-sm leading-relaxed text-slate-600">
                         {storefront.description}
                     </p>
                 </div>
                 <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4">
                     <div className="flex flex-col">
                         <span className="text-xs font-medium text-slate-500">Owner</span>
-                        <span className="text-sm font-semibold text-charcoal">{storefront.ownerName || storefront.owner}</span>
+                        <span className="text-sm font-semibold text-charcoal line-clamp-1">{storefront.ownerName || storefront.owner}</span>
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-xs font-medium text-slate-500">Products</span>

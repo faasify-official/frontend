@@ -1,16 +1,29 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import StorefrontCard from '@components/StorefrontCard'
 import SearchBar from '@components/SearchBar'
 import { apiGet } from '@utils/api'
 import { useSearch } from '@hooks/useSearch'
 import type { Storefront } from '../types/storefront'
 
+const CATEGORIES = [
+    'All',
+    'Lifestyle',
+    'Handmade',
+    'Food & Beverage',
+    'Electronics',
+    'Fashion',
+    'Home & Garden',
+    'Sports & Outdoors',
+    'Books & Media',
+    'Other',
+]
+
 const StorefrontsPage = () => {
     const [storefronts, setStorefronts] = useState<Storefront[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [selectedCategory, setSelectedCategory] = useState<string>('All')
     const { query, clearQuery } = useSearch()
-    const scrollContainerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const fetchStorefronts = async () => {
@@ -30,22 +43,30 @@ const StorefrontsPage = () => {
         fetchStorefronts()
     }, [])
 
-    // Filter storefronts based on search query
+    // Filter storefronts based on search query and category
     const filteredStorefronts = useMemo(() => {
-        if (!query.trim()) {
-            return storefronts
+        let filtered = storefronts
+
+        // Filter by category
+        if (selectedCategory !== 'All') {
+            filtered = filtered.filter((storefront) => storefront.category === selectedCategory)
         }
 
-        const normalizedQuery = query.toLowerCase().trim()
-        return storefronts.filter((storefront) => {
-            const nameMatch = storefront.name.toLowerCase().includes(normalizedQuery)
-            const descriptionMatch = storefront.description.toLowerCase().includes(normalizedQuery)
-            const categoryMatch = storefront.category.toLowerCase().includes(normalizedQuery)
-            const ownerMatch = (storefront.ownerName || storefront.owner).toLowerCase().includes(normalizedQuery)
+        // Filter by search query
+        if (query.trim()) {
+            const normalizedQuery = query.toLowerCase().trim()
+            filtered = filtered.filter((storefront) => {
+                const nameMatch = storefront.name.toLowerCase().includes(normalizedQuery)
+                const descriptionMatch = storefront.description.toLowerCase().includes(normalizedQuery)
+                const categoryMatch = storefront.category.toLowerCase().includes(normalizedQuery)
+                const ownerMatch = (storefront.ownerName || storefront.owner).toLowerCase().includes(normalizedQuery)
 
-            return nameMatch || descriptionMatch || categoryMatch || ownerMatch
-        })
-    }, [storefronts, query])
+                return nameMatch || descriptionMatch || categoryMatch || ownerMatch
+            })
+        }
+
+        return filtered
+    }, [storefronts, query, selectedCategory])
 
 
     return (
@@ -59,6 +80,26 @@ const StorefrontsPage = () => {
                 </div>
                 <div className="flex items-center justify-center">
                     <SearchBar />
+                </div>
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold text-slate-700">Filter by Category</h2>
+                <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.map((category) => (
+                        <button
+                            key={category}
+                            onClick={() => setSelectedCategory(category)}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                selectedCategory === category
+                                    ? 'bg-primary text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                            {category}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -90,17 +131,28 @@ const StorefrontsPage = () => {
                 <>
                     <div className="flex items-center justify-between">
                         <p className="text-sm text-slate-500">
-                            {query.trim()
-                                ? `Showing ${filteredStorefronts.length} result${filteredStorefronts.length === 1 ? '' : 's'} for "${query}"`
+                            {query.trim() || selectedCategory !== 'All'
+                                ? `Showing ${filteredStorefronts.length} result${filteredStorefronts.length === 1 ? '' : 's'}`
                                 : `Showing ${filteredStorefronts.length} storefront${filteredStorefronts.length === 1 ? '' : 's'}`}
+                            {query.trim() && ` for "${query}"`}
+                            {selectedCategory !== 'All' && ` in ${selectedCategory}`}
                         </p>
+                        {(query.trim() || selectedCategory !== 'All') && (
+                            <button
+                                onClick={() => {
+                                    clearQuery()
+                                    setSelectedCategory('All')
+                                }}
+                                className="text-sm text-primary hover:underline"
+                            >
+                                Clear filters
+                            </button>
+                        )}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" style={{ minWidth: 'max-content' }}>
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filteredStorefronts.map((storefront) => (
-                            <div key={storefront.storeId} className="flex-shrink-0" style={{ width: '320px' }}>
-                                <StorefrontCard storefront={storefront} />
-                            </div>
+                            <StorefrontCard key={storefront.storeId} storefront={storefront} />
                         ))}
                     </div>
                 </>
