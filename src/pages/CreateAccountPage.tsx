@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@context/AuthContext'
 
 const options = [
@@ -8,14 +8,27 @@ const options = [
 ]
 
 const CreateAccountPage = () => {
+  const [searchParams] = useSearchParams()
+  const roleParam = searchParams.get('role')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'buyer' | 'seller'>('buyer')
+  const [role, setRole] = useState<'buyer' | 'seller'>(
+    (roleParam === 'seller' ? 'seller' : 'buyer') as 'buyer' | 'seller'
+  )
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
   const navigate = useNavigate()
+
+  // Update role when query param changes
+  useEffect(() => {
+    if (roleParam === 'seller') {
+      setRole('seller')
+    } else if (roleParam === 'buyer') {
+      setRole('buyer')
+    }
+  }, [roleParam])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

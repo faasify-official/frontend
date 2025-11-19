@@ -10,20 +10,32 @@ const Navbar = () => {
   const { user, isAuthenticated, logout, isSeller } = useAuth()
   const hasStorefront = user?.hasStorefront === true
 
-  const navItems = useMemo(() => [
-    { label: 'Home', to: '/' },
-    { label: 'Stores', to: '/storefronts' },
-    { label: 'Profile', to: '/profile' },
-    { label: isSeller ? 'Orders' : 'Purchases', to: isSeller ? '/orders' : '/purchases' },
-  ], [isSeller])
+  const navItems = useMemo(() => {
+    const items = [
+      { label: 'Home', to: '/' },
+      { label: 'Stores', to: '/storefronts' },
+    ]
+    
+    // Only show Profile and Orders/Purchases for authenticated users
+    if (isAuthenticated) {
+      items.push(
+        { label: 'Profile', to: '/profile' },
+        { label: isSeller ? 'Orders' : 'Purchases', to: isSeller ? '/orders' : '/purchases' }
+      )
+    }
+    
+    return items
+  }, [isAuthenticated, isSeller])
 
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-8 lg:px-12">
         <Link to="/" className="flex items-center gap-2 text-xl font-semibold text-primary">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <ShoppingCart size={20} strokeWidth={2.5} />
-          </span>
+          <img 
+            src="/logo.png" 
+            alt="FaaSify Logo" 
+            className="h-9 w-auto"
+          />
           FaaSify
         </Link>
 

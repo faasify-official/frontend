@@ -147,15 +147,17 @@ const ProductDetailPage = () => {
             alt={product.name}
             className="relative h-full w-full rounded-3xl object-cover shadow-lg hover:shadow-2xl transition-shadow duration-300"
           />
-          <button
-            onClick={() => setIsWishlisted(!isWishlisted)}
-            className="absolute top-4 right-4 rounded-full bg-white/90 p-3 shadow-md hover:bg-white hover:scale-110 transition-all duration-300"
-          >
-            <Heart
-              size={24}
-              className={`transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-slate-400'}`}
-            />
-          </button>
+          {!isSeller && (
+            <button
+              onClick={() => setIsWishlisted(!isWishlisted)}
+              className="absolute top-4 right-4 rounded-full bg-white/90 p-3 shadow-md hover:bg-white hover:scale-110 transition-all duration-300"
+            >
+              <Heart
+                size={24}
+                className={`transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-slate-400'}`}
+              />
+            </button>
+          )}
         </div>
 
         {/* Product Details and Cart Controls */}

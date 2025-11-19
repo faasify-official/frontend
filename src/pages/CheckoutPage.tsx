@@ -9,7 +9,7 @@ import { Lock, ArrowLeft, CheckCircle } from 'lucide-react'
 
 const CheckoutPage = () => {
   const { cartItems, total, clearCart } = useCart()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isSeller } = useAuth()
   const navigate = useNavigate()
   const stripe = useStripe()
   const elements = useElements()
@@ -179,6 +179,27 @@ const CheckoutPage = () => {
           </div>
           <Link to="/login" className="btn-primary">
             Log In
+          </Link>
+        </div>
+      </section>
+    )
+  }
+
+  // Redirect sellers - they cannot checkout
+  if (isSeller) {
+    return (
+      <section className="space-y-8">
+        <div className="animate-fade-in-up card flex flex-col items-center gap-6 py-12 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+            <Lock size={32} className="text-slate-400" />
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-charcoal">Sellers cannot checkout</p>
+            <p className="mt-1 text-sm text-slate-500">Only buyers can make purchases.</p>
+          </div>
+          <Link to="/" className="btn-primary flex items-center gap-2">
+            <ArrowLeft size={18} />
+            Go to Home
           </Link>
         </div>
       </section>

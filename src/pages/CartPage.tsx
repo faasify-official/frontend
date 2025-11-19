@@ -1,11 +1,35 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Minus, Plus, X, ShoppingBag, ArrowLeft } from 'lucide-react'
 import { useCart } from '@hooks/useCart'
+import { useAuth } from '@context/AuthContext'
 
 const CartPage = () => {
   const { cartItems, removeFromCart, clearCart, total, updateQuantity } = useCart()
+  const { isAuthenticated, isSeller } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const orderPlaced = location.state?.orderPlaced
+
+  // Redirect sellers - they cannot access cart
+  if (isSeller) {
+    return (
+      <section className="space-y-8">
+        <div className="animate-fade-in-up card flex flex-col items-center gap-6 py-12 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+            <ShoppingBag size={32} className="text-slate-400" />
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-charcoal">Sellers cannot access cart</p>
+            <p className="mt-1 text-sm text-slate-500">Only buyers can add items to cart and make purchases.</p>
+          </div>
+          <Link to="/" className="btn-primary flex items-center gap-2">
+            <ArrowLeft size={18} />
+            Go to Home
+          </Link>
+        </div>
+      </section>
+    )
+  }
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -151,7 +175,13 @@ const CartPage = () => {
             </div>
 
             <Link
-              to="/checkout"
+              to={isAuthenticated ? "/checkout" : "/login"}
+              onClick={(e) => {
+                if (!isAuthenticated) {
+                  e.preventDefault()
+                  navigate('/login')
+                }
+              }}
               className="btn-primary w-full text-center font-semibold py-3 animate-button-hover block"
             >
               Proceed to Checkout

@@ -17,7 +17,7 @@ export default function ReviewItemPage() {
     const productName = searchParams.get("name") ?? "this service";
 
     const navigate = useNavigate();
-    const { token } = useAuth();
+    const { token, isSeller } = useAuth();
 
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
@@ -85,6 +85,28 @@ export default function ReviewItemPage() {
     // -------------------------------------------------------------------------
     // UI (Dipen frontend preserved)
     // -------------------------------------------------------------------------
+    
+    // Redirect sellers - they cannot write reviews
+    if (isSeller) {
+        return (
+            <section className="max-w-2xl mx-auto px-6 py-10">
+                <div className="animate-fade-in-up card flex flex-col items-center gap-6 py-12 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                        <Star size={32} className="text-slate-400" />
+                    </div>
+                    <div>
+                        <p className="text-lg font-semibold text-charcoal">Sellers cannot write reviews</p>
+                        <p className="mt-1 text-sm text-slate-500">Only buyers can write reviews for products.</p>
+                    </div>
+                    <button onClick={() => navigate(-1)} className="btn-outline flex items-center gap-2">
+                        <ArrowLeft size={18} />
+                        Go back
+                    </button>
+                </div>
+            </section>
+        )
+    }
+
     return (
         <section className="max-w-2xl mx-auto px-6 py-10">
             <div className="animate-fade-in-up mb-6">
