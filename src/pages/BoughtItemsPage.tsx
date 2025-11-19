@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@context/AuthContext";
-import { Package, Calendar, Star, ArrowLeft, CheckCircle } from "lucide-react";
+import { Package, Calendar, Star, ArrowLeft, CheckCircle, FileText } from "lucide-react";
+import { apiGet } from "@utils/api";
 
 type OrderFromAPI = {
     id: string;
@@ -27,12 +28,30 @@ type BoughtItem = {
     price: number;
     orderDate: string;
     orderStatus: string;
+    hasReview?: boolean;
+    userReview?: {
+        reviewId: string;
+        rating: number;
+        comment: string;
+        title?: string;
+        createdAt: string;
+    };
+};
+
+type Review = {
+    reviewId: string;
+    productId: string;
+    userId: string;
+    rating: number;
+    comment: string;
+    title?: string;
+    createdAt: string;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function BoughtItemsPage() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
 
     const [items, setItems] = useState<BoughtItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -81,7 +100,33 @@ export default function BoughtItemsPage() {
                 const orders: OrderFromAPI[] = data.orders ?? [];
 
                 const flattened = flattenOrders(orders);
-                setItems(flattened);
+                
+                // Check if user has reviewed each product
+                if (user?.userId && flattened.length > 0) {
+                    const itemsWithReviews = await Promise.all(
+                        flattened.map(async (item) => {
+                            try {
+                                const reviewsData = await apiGet<{ reviews: Review[] }>(
+                                    `/reviews/product/${item.productId}`
+                                );
+                                const reviews = reviewsData.reviews || [];
+                                const userReview = reviews.find((review) => review.userId === user.userId);
+                                
+                                return {
+                                    ...item,
+                                    hasReview: !!userReview,
+                                    userReview: userReview || undefined,
+                                };
+                            } catch (err) {
+                                console.error(`Error fetching reviews for product ${item.productId}:`, err);
+                                return { ...item, hasReview: false };
+                            }
+                        })
+                    );
+                    setItems(itemsWithReviews);
+                } else {
+                    setItems(flattened);
+                }
 
             } catch (err) {
                 console.error("Error fetching orders:", err);
@@ -99,19 +144,24 @@ export default function BoughtItemsPage() {
             setItems([]);
         }
 
-    }, [token]);
+    }, [token, user?.userId]);
 
     const handleReviewClick = (item: BoughtItem) => {
         if (!item.productId) {
             console.error('Bought item is missing productId', item)
             alert("This item cannot be reviewed because product info is missing.");
-            return
+            return;
         }
 
-
-        navigate(
-            `/product/${item.productId}/review?orderId=${encodeURIComponent(item.orderId)}`
-        );
+        // If user has already reviewed, navigate to product page to see their review
+        if (item.hasReview) {
+            navigate(`/product/${item.productId}`);
+        } else {
+            // Navigate to review page to write a new review
+            navigate(
+                `/product/${item.productId}/review?orderId=${encodeURIComponent(item.orderId)}`
+            );
+        }
     };
 
     if (loading) {
@@ -238,13 +288,23 @@ export default function BoughtItemsPage() {
                                         <div className="text-lg font-bold text-primary">${item.price.toFixed(2)}</div>
                                     </div>
 
-                                    <button
-                                        className="btn-primary text-sm flex items-center justify-center gap-2 animate-button-hover w-full sm:w-auto"
-                                        onClick={() => handleReviewClick(item)}
-                                    >
-                                        <Star size={16} />
-                                        Review
-                                    </button>
+                                    {item.hasReview ? (
+                                        <button
+                                            className="btn-outline text-sm flex items-center justify-center gap-2 animate-button-hover w-full sm:w-auto"
+                                            onClick={() => handleReviewClick(item)}
+                                        >
+                                            <FileText size={16} />
+                                            My Review
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="btn-primary text-sm flex items-center justify-center gap-2 animate-button-hover w-full sm:w-auto"
+                                            onClick={() => handleReviewClick(item)}
+                                        >
+                                            <Star size={16} />
+                                            Review
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

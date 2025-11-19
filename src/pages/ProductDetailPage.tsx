@@ -217,7 +217,15 @@ const ProductDetailPage = () => {
 
       {/* Reviews Section */}
       <div className="animate-fade-in-up pt-8 border-t border-slate-200">
-        <h2 className="animate-stagger-2 text-2xl font-bold text-charcoal mb-6">Customer Reviews</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="animate-stagger-2 text-2xl font-bold text-charcoal">Customer Reviews</h2>
+          {reviews.length > 0 && (
+            <div className="flex items-center gap-2">
+              <ReviewBadge rating={reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length} showStars={true} />
+              <span className="text-sm text-slate-500">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
+            </div>
+          )}
+        </div>
 
         {reviewsLoading && (
           <div className="animate-fade-in py-8 text-center">
@@ -243,31 +251,44 @@ const ProductDetailPage = () => {
         )}
 
         {!reviewsLoading && !reviewsError && reviews.length > 0 && (
-          <ul className="space-y-3">
+          <div className="space-y-4">
             {reviews.map((review, idx) => (
-              <li
+              <div
                 key={review.reviewId}
-                className={`animate-stagger-${(idx % 6) + 1} group rounded-2xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300`}
+                className={`animate-stagger-${(idx % 6) + 1} group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300`}
               >
-                <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
-                  <span className="font-semibold text-charcoal group-hover:text-primary transition-colors">
-                    {review.reviewer || 'Verified customer'}
-                  </span>
-                  <ReviewBadge rating={review.rating} />
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                        {(review.reviewer || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-charcoal group-hover:text-primary transition-colors">
+                          {review.reviewer || 'Verified customer'}
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          {new Date(review.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <ReviewBadge rating={review.rating} showStars={true} />
+                  </div>
                 </div>
                 {review.comment && (
-                  <p className="text-sm text-slate-700 mb-2 leading-relaxed">{review.comment}</p>
+                  <div className="pl-14">
+                    <p className="text-sm text-slate-700 leading-relaxed">{review.comment}</p>
+                  </div>
                 )}
-                <p className="text-xs text-slate-400">
-                  {new Date(review.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </p>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </section>

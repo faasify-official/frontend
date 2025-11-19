@@ -1,11 +1,22 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@context/AuthContext";
 import { Star, ArrowLeft } from "lucide-react";
+import { apiGet } from "@utils/api";
 
 type ReviewRouteParams = {
     productId: string;
+};
+
+type Review = {
+    reviewId: string;
+    productId: string;
+    userId: string;
+    rating: number;
+    comment: string;
+    title?: string;
+    createdAt: string;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -17,12 +28,42 @@ export default function ReviewItemPage() {
     const productName = searchParams.get("name") ?? "this service";
 
     const navigate = useNavigate();
-    const { token, isSeller } = useAuth();
+    const { token, isSeller, user } = useAuth();
 
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
     const [title, setTitle] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [hasExistingReview, setHasExistingReview] = useState(false);
+    const [existingReview, setExistingReview] = useState<Review | null>(null);
+    const [checkingReview, setCheckingReview] = useState(true);
+
+    // Check if user has already reviewed this product
+    useEffect(() => {
+        async function checkExistingReview() {
+            if (!productId || !user?.userId) {
+                setCheckingReview(false);
+                return;
+            }
+
+            try {
+                const reviewsData = await apiGet<{ reviews: Review[] }>(`/reviews/product/${productId}`);
+                const reviews = reviewsData.reviews || [];
+                const userReview = reviews.find((review) => review.userId === user.userId);
+                
+                if (userReview) {
+                    setHasExistingReview(true);
+                    setExistingReview(userReview);
+                }
+            } catch (err) {
+                console.error("Error checking existing review:", err);
+            } finally {
+                setCheckingReview(false);
+            }
+        }
+
+        checkExistingReview();
+    }, [productId, user?.userId]);
 
     // -------------------------------------------------------------------------
     // Submit handler (test-main logic)
@@ -32,6 +73,12 @@ export default function ReviewItemPage() {
         e.preventDefault();
 
         if (!productId) return;
+
+        if (hasExistingReview) {
+            alert("You have already reviewed this product. You cannot review again.");
+            navigate(`/product/${productId}`);
+            return;
+        }
 
         if (rating < 1 || rating > 5) {
             alert("Rating must be between 1 and 5.");
@@ -86,6 +133,16 @@ export default function ReviewItemPage() {
     // UI (Dipen frontend preserved)
     // -------------------------------------------------------------------------
     
+    if (checkingReview) {
+        return (
+            <section className="max-w-2xl mx-auto px-6 py-10">
+                <div className="animate-fade-in-up card flex items-center justify-center py-12">
+                    <p className="text-slate-500">Checking review status...</p>
+                </div>
+            </section>
+        );
+    }
+
     // Redirect sellers - they cannot write reviews
     if (isSeller) {
         return (
@@ -105,6 +162,78 @@ export default function ReviewItemPage() {
                 </div>
             </section>
         )
+    }
+
+    // If user has already reviewed, show their review instead
+    if (hasExistingReview && existingReview) {
+        return (
+            <section className="max-w-2xl mx-auto px-6 py-10">
+                <div className="animate-fade-in-up mb-6">
+                    <div className="flex items-center gap-4">
+                        <Link to="/purchases" className="text-slate-400 hover:text-charcoal">
+                            <ArrowLeft />
+                        </Link>
+                        <h1 className="text-3xl font-extrabold text-charcoal">Your Review</h1>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-500">
+                        You have already reviewed <span className="font-semibold">{productName}</span>
+                    </p>
+                </div>
+
+                <div className="card p-6 space-y-6 animate-fade-in-up">
+                    <div className="space-y-4">
+                        {existingReview.title && (
+                            <div>
+                                <h3 className="text-xl font-bold text-charcoal">{existingReview.title}</h3>
+                            </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-slate-700">Rating:</span>
+                            <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                    <Star
+                                        key={n}
+                                        size={20}
+                                        className={n <= existingReview.rating ? "fill-primary text-primary" : "text-slate-300"}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        {existingReview.comment && (
+                            <div>
+                                <p className="text-sm font-medium text-slate-700 mb-2">Your Comment:</p>
+                                <p className="text-sm text-slate-700 leading-relaxed">{existingReview.comment}</p>
+                            </div>
+                        )}
+
+                        <div className="text-xs text-slate-400 pt-4 border-t border-slate-200">
+                            Reviewed on {new Date(existingReview.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            onClick={() => navigate(`/product/${productId}`)}
+                            className="btn-primary flex-1"
+                        >
+                            View Product
+                        </button>
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="btn-outline flex-1"
+                        >
+                            Back to Purchases
+                        </button>
+                    </div>
+                </div>
+            </section>
+        );
     }
 
     return (
