@@ -16,12 +16,17 @@ const Navbar = () => {
       { label: 'Stores', to: '/storefronts' },
     ]
     
-    // Only show Profile and Orders/Purchases for authenticated users
+    // Only show Profile and Purchases for authenticated users
     if (isAuthenticated) {
       items.push(
-        { label: 'Profile', to: '/profile' },
-        { label: isSeller ? 'Orders' : 'Purchases', to: isSeller ? '/orders' : '/purchases' }
+        { label: 'Profile', to: '/profile' }
       )
+      // Only show Purchases for buyers, not Orders for sellers
+      if (!isSeller) {
+        items.push(
+          { label: 'Purchases', to: '/purchases' }
+        )
+      }
     }
     
     return items
