@@ -103,7 +103,7 @@ const HomePage = () => {
       <div className="animate-fade-in-up space-y-4">
         <div className="animate-stagger-3 flex items-end justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-charcoal">Featured storefronts</h2>
+            <h2 className="text-2xl font-semibold text-charcoal">🔥 Best Sellers</h2>
             <p className="mt-1 text-sm text-slate-500">
               Browse storefronts and discover unique products from independent sellers.
             </p>
