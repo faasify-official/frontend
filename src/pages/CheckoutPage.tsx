@@ -113,11 +113,15 @@ const CheckoutPage = () => {
         console.log(cartItems.map((item) => item.product.storeId))
         // ⬇️ create order in backend DynamoDB (this will reduce quantities in DB)
         try {
+          // Get storeId from first item (assuming all items are from the same storefront)
+          const storeId = cartItems[0]?.product?.storeId || 'default-store'
+          
           await apiPost('/orders', {
             paymentIntentId: paymentIntent.id,
             amount: amountInCents,
             currency: 'cad',           // or 'cad'
             shippingInfo,              // full shipping object from your state
+            storeId,                   // Top-level storeId for the order
             items: cartItems.map((item) => ({
               itemId: item.product.id,
               storeId: item.product.storeId,
