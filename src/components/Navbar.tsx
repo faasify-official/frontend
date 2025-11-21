@@ -21,8 +21,12 @@ const Navbar = () => {
       items.push(
         { label: 'Profile', to: '/profile' }
       )
-      // Only show Purchases for buyers, not Orders for sellers
-      if (!isSeller) {
+      // Show Purchases for buyers, Orders for sellers
+      if (isSeller) {
+        items.push(
+          { label: 'Orders', to: '/orders' }
+        )
+      } else {
         items.push(
           { label: 'Purchases', to: '/purchases' }
         )

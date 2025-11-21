@@ -16,6 +16,7 @@ import CheckoutPage from '@pages/CheckoutPage'
 import ProfilePage from '@pages/ProfilePage'
 import BoughtItemsPage from '@pages/BoughtItemsPage'
 import ReviewItemPage from '@pages/ReviewItemPage'
+import SellerOrdersPage from '@pages/SellerOrdersPage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'checkout', element: <CheckoutWithStripe /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'purchases', element: <BoughtItemsPage /> },
+      { path: 'orders', element: <SellerOrdersPage /> },
     ],
   },
 ])

@@ -15,6 +15,7 @@ type Review = {
   userId: string
   reviewer?: string
   rating: number
+  title?: string
   comment: string
   createdAt: string
 }
@@ -313,7 +314,7 @@ const ProductDetailPage = () => {
                       </div>
                       <div>
                         <h4 className="font-semibold text-charcoal group-hover:text-primary transition-colors">
-                          {review.reviewer || 'Verified customer'}
+                          {review.title && review.title.trim() ? review.title : (review.reviewer || 'Verified customer')}
                         </h4>
                         <p className="text-xs text-slate-500">
                           {new Date(review.createdAt).toLocaleDateString('en-US', {

@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@context/AuthContext";
-import { Package, Calendar, Star, ArrowLeft, CheckCircle, FileText } from "lucide-react";
+import { Package, Calendar, Star, ArrowLeft, FileText } from "lucide-react";
 import { apiGet } from "@utils/api";
+import OrderStatusBadge from "@components/OrderStatusBadge";
 
 type OrderFromAPI = {
     id: string;
     createdAt: string;
     status: string;
+    orderStatus?: string;
+    carrier?: string | null;
+    trackingId?: string | null;
     items: {
         itemId: string;
         name: string;
@@ -28,6 +32,8 @@ type BoughtItem = {
     price: number;
     orderDate: string;
     orderStatus: string;
+    carrier?: string | null;
+    trackingId?: string | null;
     hasReview?: boolean;
     userReview?: {
         reviewId: string;
@@ -70,7 +76,9 @@ export default function BoughtItemsPage() {
                 description: item.description,
                 price: item.price,
                 orderDate: order.createdAt,
-                orderStatus: order.status,
+                orderStatus: order.status || order.orderStatus || 'ORDER_CONFIRMED',
+                carrier: order.carrier,
+                trackingId: order.trackingId,
             }))
         );
     }
@@ -267,17 +275,13 @@ export default function BoughtItemsPage() {
                                         <div className="text-xs text-slate-400">Order #{item.orderId.slice(0, 8).toUpperCase()}</div>
                                     </div>
 
-                                    <div className="mt-3 text-xs">
-                                        <span className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-semibold border ${item.orderStatus?.toUpperCase() === 'PAID'
-                                                ? 'bg-green-50 text-green-700 border-green-200'
-                                                : 'bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            {item.orderStatus?.toUpperCase() === 'PAID' && (
-                                                <CheckCircle size={14} className="text-green-600" />
-                                            )}
-                                            <span className="uppercase">{item.orderStatus}</span>
-                                        </span>
+                                    <div className="mt-3">
+                                        <OrderStatusBadge 
+                                            status={item.orderStatus || 'ORDER_CONFIRMED'} 
+                                            isSeller={false}
+                                            carrier={item.carrier}
+                                            trackingId={item.trackingId}
+                                        />
                                     </div>
                                 </div>
 
