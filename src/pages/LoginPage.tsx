@@ -1,18 +1,32 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@context/AuthContext'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Check for success message from registration redirect
+  useEffect(() => {
+    const state = location.state as any
+    if (state?.message) {
+      setSuccessMessage(state.message)
+      if (state?.email) {
+        setEmail(state.email)
+      }
+    }
+  }, [location])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
     setIsLoading(true)
 
     try {
@@ -31,6 +45,12 @@ const LoginPage = () => {
         <h1 className="text-3xl font-semibold text-charcoal">Welcome back</h1>
         <p className="text-sm text-slate-500">Access your storefront dashboard with ease.</p>
       </div>
+
+      {successMessage && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+          {successMessage}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

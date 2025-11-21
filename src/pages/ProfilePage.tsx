@@ -24,8 +24,9 @@ const ProfilePage = () => {
     })
   }
 
-  // Capitalize role
-  const formatRole = (role: string) => {
+  // Capitalize role, handle undefined/null
+  const formatRole = (role?: string) => {
+    if (!role || typeof role !== 'string') return 'Unknown'
     return role.charAt(0).toUpperCase() + role.slice(1)
   }
 
@@ -69,7 +70,7 @@ const ProfilePage = () => {
           <div className="mt-4 flex gap-3">
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-4 py-2 text-sm font-semibold text-primary">
               <Shield size={16} />
-              {formatRole(user.role)}
+              {formatRole(user?.role)}
             </span>
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-200/50 px-4 py-2 text-sm font-medium text-slate-700">
               <Calendar size={16} />

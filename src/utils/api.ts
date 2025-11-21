@@ -7,9 +7,51 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 /**
  * Gets the auth token from localStorage
+ * With Cognito, we store tokens as a JSON object with idToken, accessToken, refreshToken
  */
 const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken')
+  try {
+    const tokenData = localStorage.getItem('authTokens')
+    if (tokenData) {
+      const parsed = JSON.parse(tokenData)
+      // Return idToken for API requests (contains claims and user info)
+      return parsed.idToken || null
+    }
+  } catch (e) {
+    // Fall back to old single token format for backwards compatibility
+    return localStorage.getItem('authToken')
+  }
+  return null
+}
+
+/**
+ * Gets ALL (3) auth tokens (including refresh token)
+ */
+export const getAuthTokens = () => {
+  try {
+    const tokenData = localStorage.getItem('authTokens')
+    if (tokenData) {
+      return JSON.parse(tokenData)
+    }
+  } catch (e) {
+    console.error('Error parsing auth tokens:', e)
+  }
+  return null
+}
+
+/**
+ * Stores auth tokens from Cognito
+ */
+export const setAuthTokens = (tokens: { idToken: string; accessToken: string; refreshToken: string }) => {
+  localStorage.setItem('authTokens', JSON.stringify(tokens))
+}
+
+/**
+ * Clears auth tokens
+ */
+export const clearAuthTokens = () => {
+  localStorage.removeItem('authTokens')
+  localStorage.removeItem('authToken') // Clear old format too
 }
 
 /**
@@ -23,7 +65,7 @@ export async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
-  
+
   const token = getAuthToken()
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',

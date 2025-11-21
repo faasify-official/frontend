@@ -43,7 +43,9 @@ const CreateAccountPage = () => {
 
     try {
       await register(name, email, password, role)
-      navigate('/')
+      // After successful registration, redirect to login page
+      // User needs to log in to receive Cognito tokens
+      navigate('/login', { state: { email, message: 'Account created! Please log in with your credentials.' } })
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {
@@ -119,11 +121,10 @@ const CreateAccountPage = () => {
             {options.map((option) => (
               <label
                 key={option.value}
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${
-                  role === option.value
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${role === option.value
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-slate-200 hover:border-primary/60'
-                }`}
+                  }`}
               >
                 <input
                   type="radio"

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { apiPost } from '@utils/api'
+import { setAuthTokens, clearAuthTokens, getAuthTokens } from '@utils/api'
 
 export type User = {
     userId: string
@@ -48,25 +49,26 @@ export const AuthProvider = ({ children }: Props) => {
 
     // Load token and user from localStorage on mount
     useEffect(() => {
-        const storedToken = localStorage.getItem('authToken')
-        if (storedToken) {
-            setToken(storedToken)
-            // Try to fetch user profile
-            fetchProfile(storedToken)
-        } else {
-            // Development mode: Auto-login with mock user if no token exists
-            // This allows testing UI without backend authentication
-            if (import.meta.env.DEV) {
-                const useMockAuth = localStorage.getItem('useMockAuth') !== 'false' // Default to true in dev
-                if (useMockAuth) {
-                    setUser(MOCK_USER)
-                    setToken(MOCK_TOKEN)
-                    localStorage.setItem('authToken', MOCK_TOKEN)
-                    console.log('🔧 Development mode: Using mock authentication')
+        const initializeAuth = async () => {
+            const storedTokens = getAuthTokens()
+            if (storedTokens?.idToken) {
+                setToken(storedTokens.idToken)
+                // Fetch user profile and wait for it to complete
+                await fetchProfile(storedTokens.idToken)
+            } else {
+                // Development mode: Auto-login with mock user if no token exists
+                if (import.meta.env.DEV) {
+                    const useMockAuth = localStorage.getItem('useMockAuth') !== 'false' // Default to true in dev
+                    if (useMockAuth) {
+                        setUser(MOCK_USER)
+                        setToken(MOCK_TOKEN)
+                        console.log('🔧 Development mode: Using mock authentication')
+                    }
                 }
+                setIsLoading(false)
             }
-            setIsLoading(false)
         }
+        initializeAuth()
     }, [])
 
     const fetchProfile = async (authToken: string) => {
@@ -78,7 +80,6 @@ export const AuthProvider = ({ children }: Props) => {
         }
 
         try {
-            // We'll need to update apiGet to include auth headers
             const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/profile`, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
@@ -87,38 +88,49 @@ export const AuthProvider = ({ children }: Props) => {
 
             if (response.ok) {
                 const data = await response.json()
+                console.log('✓ Profile fetched successfully:', data.user)
                 setUser(data.user)
+                setIsLoading(false)
             } else {
+                console.error('Profile fetch failed with status:', response.status)
+                const error = await response.json().catch(() => ({}))
+                console.error('Error response:', error)
                 // Token invalid, clear it
-                localStorage.removeItem('authToken')
+                clearAuthTokens()
                 setToken(null)
+                setUser(null)
+                setIsLoading(false)
             }
         } catch (error) {
             console.error('Error fetching profile:', error)
-            // In dev mode, if API fails, fall back to mock user
+            // If API call fails, don't assume it's invalid - could be network issue
+            // In dev mode, fall back to mock user
             if (import.meta.env.DEV) {
                 console.log('🔧 Development mode: API unavailable, using mock authentication')
                 setUser(MOCK_USER)
                 setToken(MOCK_TOKEN)
             } else {
-                localStorage.removeItem('authToken')
+                clearAuthTokens()
                 setToken(null)
+                setUser(null)
             }
-        } finally {
             setIsLoading(false)
         }
     }
 
     const login = async (email: string, password: string) => {
         try {
-            const data = await apiPost<{ user: User; token: string }>('/auth/login', {
+            const data = await apiPost<{
+                user: User
+                tokens: { idToken: string; accessToken: string; refreshToken: string }
+            }>('/auth/login', {
                 email,
                 password,
             })
 
             setUser(data.user)
-            setToken(data.token)
-            localStorage.setItem('authToken', data.token)
+            setToken(data.tokens.idToken)
+            setAuthTokens(data.tokens)
         } catch (error: any) {
             throw new Error(error.message || 'Login failed')
         }
@@ -131,7 +143,7 @@ export const AuthProvider = ({ children }: Props) => {
         role: 'buyer' | 'seller'
     ) => {
         try {
-            const data = await apiPost<{ user: User; token: string }>('/auth/register', {
+            const data = await apiPost<{ user: User }>('/auth/register', {
                 name,
                 email,
                 password,
@@ -139,8 +151,8 @@ export const AuthProvider = ({ children }: Props) => {
             })
 
             setUser(data.user)
-            setToken(data.token)
-            localStorage.setItem('authToken', data.token)
+            // After registration, user needs to log in to get tokens
+            // This is handled by the component redirecting to login
         } catch (error: any) {
             throw new Error(error.message || 'Registration failed')
         }
@@ -149,13 +161,13 @@ export const AuthProvider = ({ children }: Props) => {
     const logout = () => {
         setUser(null)
         setToken(null)
-        localStorage.removeItem('authToken')
+        clearAuthTokens()
     }
 
     const refreshProfile = async () => {
-        const storedToken = localStorage.getItem('authToken')
-        if (storedToken) {
-            await fetchProfile(storedToken)
+        const storedTokens = getAuthTokens()
+        if (storedTokens?.idToken) {
+            await fetchProfile(storedTokens.idToken)
         }
     }
 
