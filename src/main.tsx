@@ -17,6 +17,7 @@ import ProfilePage from '@pages/ProfilePage'
 import BoughtItemsPage from '@pages/BoughtItemsPage'
 import ReviewItemPage from '@pages/ReviewItemPage'
 import SellerOrdersPage from '@pages/SellerOrdersPage'
+import ChatListPage from '@pages/ChatListPage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
       { path: 'profile', element: <ProfilePage /> },
       { path: 'purchases', element: <BoughtItemsPage /> },
       { path: 'orders', element: <SellerOrdersPage /> },
+      { path: 'chats', element: <ChatListPage /> },
     ],
   },
 ])
