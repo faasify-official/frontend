@@ -4,6 +4,7 @@ import { MessageCircle, ArrowLeft, Search } from 'lucide-react'
 import ChatListItem from '@components/ChatListItem'
 import { apiGet } from '@utils/api'
 import { useAuth } from '@context/AuthContext'
+import { useChatWebSocket } from '@hooks/useChatWebSocket'
 import type { Chat } from '../types/chat'
 
 const ChatListPage = () => {
@@ -12,6 +13,7 @@ const ChatListPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const { user } = useAuth()
+  const { subscribeToNewChats, isConnected } = useChatWebSocket()
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -31,6 +33,31 @@ const ChatListPage = () => {
 
     fetchChats()
   }, [])
+
+  // Subscribe to new chat notifications via WebSocket
+  useEffect(() => {
+    if (!isConnected) return
+
+    const unsubscribe = subscribeToNewChats(async (chatId: string) => {
+      try {
+        // Fetch the new chat details
+        const data = await apiGet<{ chat: Chat }>(`/chats/${chatId}`)
+        
+        setChats((prev) => {
+          // Check if chat already exists
+          const exists = prev.some(chat => chat.id === chatId)
+          if (exists) return prev
+          
+          // Add new chat to the top of the list
+          return [data.chat, ...prev]
+        })
+      } catch (err) {
+        console.error('Error fetching new chat:', err)
+      }
+    })
+
+    return unsubscribe
+  }, [isConnected, subscribeToNewChats])
 
   // Filter chats based on search query
   const filteredChats = useMemo(() => {
@@ -75,7 +102,15 @@ const ChatListPage = () => {
         <div className="rounded-xl bg-gradient-to-r from-primary/6 to-transparent p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-extrabold text-charcoal">Messages</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-4xl font-extrabold text-charcoal">Messages</h1>
+                {isConnected && (
+                  <div className="flex items-center gap-1.5 text-xs text-green-600">
+                    <div className="h-2 w-2 rounded-full bg-green-600 animate-pulse" />
+                    <span className="hidden sm:inline">Live</span>
+                  </div>
+                )}
+              </div>
               <p className="mt-2 text-sm text-slate-500">
                 {chats.length === 0
                   ? 'Your conversations will appear here'

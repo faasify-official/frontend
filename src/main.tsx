@@ -22,6 +22,7 @@ import ChatPage from '@pages/ChatPage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
+import { WebSocketProvider } from '@context/WebSocketContext'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 
@@ -62,9 +63,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
       <ToastProvider>
-        <CartProvider>
-          <RouterProvider router={router} />
-        </CartProvider>
+        <WebSocketProvider>
+          <CartProvider>
+            <RouterProvider router={router} />
+          </CartProvider>
+        </WebSocketProvider>
       </ToastProvider>
     </AuthProvider>
   </React.StrictMode>,

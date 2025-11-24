@@ -5,12 +5,14 @@ import MessageBubble from '@components/MessageBubble'
 import { apiGet, apiPost } from '@utils/api'
 import { useAuth } from '@context/AuthContext'
 import { useToast } from '@context/ToastContext'
+import { useChatWebSocket } from '@hooks/useChatWebSocket'
 import type { Chat, Message } from '../types/chat'
 
 const ChatPage = () => {
   const { chatId } = useParams<{ chatId: string }>()
   const { user } = useAuth()
   const { showToast } = useToast()
+  const { isConnected, sendChatMessage, subscribeToChat } = useChatWebSocket()
 
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -62,6 +64,22 @@ const ChatPage = () => {
     fetchChatData()
   }, [chatId])
 
+  // Subscribe to real-time messages via WebSocket
+  useEffect(() => {
+    if (!chatId || !isConnected) return
+
+    const unsubscribe = subscribeToChat(chatId, (newMessage: Message) => {
+      setMessages((prev) => {
+        // Avoid duplicates - check if message already exists
+        const exists = prev.some(msg => msg.id === newMessage.id)
+        if (exists) return prev
+        return [...prev, newMessage]
+      })
+    })
+
+    return unsubscribe
+  }, [chatId, isConnected, subscribeToChat])
+
   // Handle sending a message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,18 +97,31 @@ const ChatPage = () => {
 
     // Optimistically add message to UI
     setMessages((prev) => [...prev, tempMessage])
+    const messageContent = messageText.trim()
     setMessageText('')
     
     setIsSending(true)
     try {
-      const response = await apiPost<{ message: Message }>(`/chats/${chatId}/messages`, {
-        content: messageText.trim(),
-      })
+      if (isConnected) {
+        // Send via WebSocket for real-time delivery
+        sendChatMessage(chatId, messageContent)
+        
+        // The actual message will come back via WebSocket subscription
+        // Remove temp message after a short delay (it will be replaced by real one)
+        setTimeout(() => {
+          setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id))
+        }, 100)
+      } else {
+        // Fallback to REST API if WebSocket not connected
+        const response = await apiPost<{ message: Message }>(`/chats/${chatId}/messages`, {
+          content: messageContent,
+        })
 
-      // Replace temp message with real one from server
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempMessage.id ? response.message : msg))
-      )
+        // Replace temp message with real one from server
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === tempMessage.id ? response.message : msg))
+        )
+      }
     } catch (err: any) {
       console.error('Error sending message:', err)
       showToast(err.message || 'Failed to send message', 'error')
@@ -99,7 +130,7 @@ const ChatPage = () => {
       setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id))
       
       // Restore message text so user can try again
-      setMessageText(tempMessage.content)
+      setMessageText(messageContent)
     } finally {
       setIsSending(false)
       inputRef.current?.focus()
@@ -182,6 +213,19 @@ const ChatPage = () => {
                 </div>
               )}
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isConnected ? (
+              <div className="flex items-center gap-1.5 text-xs text-green-600">
+                <div className="h-2 w-2 rounded-full bg-green-600 animate-pulse" />
+                <span className="hidden sm:inline">Connected</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <div className="h-2 w-2 rounded-full bg-slate-400" />
+                <span className="hidden sm:inline">Offline</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
