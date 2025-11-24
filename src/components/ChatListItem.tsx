@@ -43,8 +43,8 @@ const ChatListItem = ({ chat, currentUserId }: Props) => {
   return (
     <Link
       to={`/chat/${chat.id}`}
-      className={`group card hover:shadow-xl hover:-translate-y-1 transform transition-all duration-300 ${
-        hasUnread ? 'border-l-4 border-l-primary' : ''
+      className={`group hover:shadow-xl hover:-translate-y-1 transform transition-all duration-300 ${
+        hasUnread ? 'border-l-primary' : ''
       }`}
     >
       <div className="flex items-center gap-4 p-4">

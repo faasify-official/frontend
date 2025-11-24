@@ -18,6 +18,7 @@ import BoughtItemsPage from '@pages/BoughtItemsPage'
 import ReviewItemPage from '@pages/ReviewItemPage'
 import SellerOrdersPage from '@pages/SellerOrdersPage'
 import ChatListPage from '@pages/ChatListPage'
+import ChatPage from '@pages/ChatPage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       { path: 'purchases', element: <BoughtItemsPage /> },
       { path: 'orders', element: <SellerOrdersPage /> },
       { path: 'chats', element: <ChatListPage /> },
+      { path: 'chat/:chatId', element: <ChatPage /> },
     ],
   },
 ])

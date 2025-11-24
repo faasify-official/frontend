@@ -19,6 +19,7 @@ const ChatListPage = () => {
       setError(null)
       try {
         const data = await apiGet<{ chats: Chat[] }>('/chats')
+        console.log(data)
         setChats(data.chats || [])
       } catch (err: any) {
         setError(err.message || 'Failed to fetch chats')

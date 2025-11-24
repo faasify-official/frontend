@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
+import { MessageCircle } from 'lucide-react'
 import ProductCard from '@components/ProductCard'
-import { apiGet } from '@utils/api'
+import StartConversationModal from '@components/StartConversationModal'
+import { apiGet, apiPost } from '@utils/api'
 import { storefronts as mockStorefronts } from '@data/storefronts'
 import { products as mockProducts } from '@data/products'
 import { useAuth } from '@context/AuthContext'
@@ -9,16 +11,20 @@ import { useSubscription } from '../hooks/useSubscription'
 import { useToast } from '@context/ToastContext'
 import type { Storefront } from '../types/storefront'
 import type { Product } from '../types/product'
+import type { Chat } from 'types/chat'
 
 // Mock store IDs that should use mock data
 const MOCK_STORE_IDS = ['minimal-market', 'artisan-atelier', 'fresh-bites']
 
 const StorefrontPage = () => {
     const { storeId } = useParams<{ storeId: string }>()
+    const navigate = useNavigate()
     const [storefront, setStorefront] = useState<Storefront | null>(null)
     const [items, setItems] = useState<Product[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [isMessageLoading, setIsMessageLoading] = useState(false)
+    const [isModalOpen, setIsModalOpen] = useState(false)
     const { isBuyer } = useAuth()
     const { isSubscribed, isLoading: isSubscriptionLoading, isChecking, subscribe, unsubscribe } = useSubscription(storeId || '')
     const { showToast } = useToast()
@@ -38,6 +44,34 @@ const StorefrontPage = () => {
             showToast('Successfully unsubscribed from storefront', 'success')
         } catch (error: any) {
             showToast(error.message || 'Failed to unsubscribe', 'error')
+        }
+    }
+
+    const handleMessageSeller = () => {
+        setIsModalOpen(true)
+    }
+
+    const handleSendMessage = async (initialMessage: string) => {
+        if (!storefront || !storeId) return
+
+        setIsMessageLoading(true)
+        try {
+            // Create a chat with the initial message
+            const response = await apiPost<{ chat: Chat }>('/chats', {
+                storeId: storeId,
+                sellerId: storefront.owner,
+                storeName: storefront.name,
+                initialMessage: initialMessage,
+            })
+
+            // Close modal and navigate to the chat page
+            setIsModalOpen(false)
+            navigate(`/chat/${response.chat.id}`)
+        } catch (error: any) {
+            console.error('Error creating chat:', error)
+            showToast(error.message || 'Failed to start conversation', 'error')
+        } finally {
+            setIsMessageLoading(false)
         }
     }
 
@@ -164,7 +198,7 @@ const StorefrontPage = () => {
                         <span>{items.length} {items.length === 1 ? 'item' : 'items'}</span>
                     </div>
                     {isBuyer && !isChecking && storeId && (
-                        <div className="pt-4">
+                        <div className="pt-4 flex flex-wrap gap-3">
                             <button
                                 onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
                                 disabled={isSubscriptionLoading}
@@ -174,6 +208,14 @@ const StorefrontPage = () => {
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
                                 {isSubscriptionLoading ? 'Loading...' : isSubscribed ? 'Unsubscribe' : 'Subscribe'}
+                            </button>
+                            <button
+                                onClick={handleMessageSeller}
+                                disabled={isMessageLoading}
+                                className="px-6 py-2.5 text-sm font-semibold rounded-lg transition-all bg-white/20 text-white border-2 border-white/30 hover:bg-white/30 hover:border-white/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                <MessageCircle size={18} />
+                                {isMessageLoading ? 'Loading...' : 'Message Seller'}
                             </button>
                         </div>
                     )}
@@ -206,6 +248,16 @@ const StorefrontPage = () => {
                     </div>
                 )}
             </div>
+
+            {/* Start Conversation Modal */}
+            <StartConversationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={handleSendMessage}
+                isLoading={isMessageLoading}
+                sellerName={storefront.ownerName || storefront.owner}
+                storeName={storefront.name}
+            />
         </section>
     )
 }
