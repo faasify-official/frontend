@@ -12,7 +12,7 @@ const ChatPage = () => {
   const { chatId } = useParams<{ chatId: string }>()
   const { user } = useAuth()
   const { showToast } = useToast()
-  const { isConnected, sendChatMessage, subscribeToChat } = useChatWebSocket()
+  const { isConnected, sendChatMessage, subscribeToChat, markMessageAsRead, subscribeToReadReceipts } = useChatWebSocket()
 
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -52,7 +52,19 @@ const ChatPage = () => {
         ])
 
         setChat(chatResponse.chat)
-        setMessages(messagesResponse.messages || [])
+        const fetchedMessages = messagesResponse.messages || []
+        setMessages(fetchedMessages)
+
+        // Mark all unread messages from other participants as read
+        if (chatId && user?.userId) {
+          const unreadMessages = fetchedMessages.filter(
+            (msg) => msg.senderId !== user.userId && !msg.readAt
+          )
+          
+          unreadMessages.forEach((msg) => {
+            markMessageAsRead(chatId, msg.id)
+          })
+        }
       } catch (err: any) {
         console.error('Error fetching chat:', err)
         setError(err.message || 'Failed to load conversation')
@@ -75,10 +87,31 @@ const ChatPage = () => {
         if (exists) return prev
         return [...prev, newMessage]
       })
+
+      // Mark incoming messages as read (if not sent by current user)
+      if (newMessage.senderId !== user?.userId && chatId) {
+        markMessageAsRead(chatId, newMessage.id)
+      }
     })
 
     return unsubscribe
-  }, [chatId, isConnected, subscribeToChat])
+  }, [chatId, isConnected, subscribeToChat, user?.userId, markMessageAsRead])
+
+  // Subscribe to read receipts via WebSocket
+  useEffect(() => {
+    if (!chatId || !isConnected) return
+
+    const unsubscribe = subscribeToReadReceipts(chatId, (messageId: string, _userId: string, readAt: string) => {
+      // Update the message's readAt timestamp in the UI
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, readAt } : msg
+        )
+      )
+    })
+
+    return unsubscribe
+  }, [chatId, isConnected, subscribeToReadReceipts])
 
   // Handle sending a message
   const handleSendMessage = async (e: React.FormEvent) => {
