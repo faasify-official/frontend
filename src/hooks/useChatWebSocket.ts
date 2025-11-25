@@ -8,6 +8,7 @@ import type {
   ChatNewPayload,
   ChatTypingPayload,
   ChatUserTypingPayload,
+  UserOnlinePayload,
 } from '../types/websocket'
 
 type ChatWebSocketHook = {
@@ -19,6 +20,7 @@ type ChatWebSocketHook = {
   subscribeToNewChats: (onNewChat: (chatId: string) => void) => () => void
   subscribeToTyping: (chatId: string, onTyping: (userId: string, userName: string, isTyping: boolean) => void) => () => void
   subscribeToReadReceipts: (chatId: string, onRead: (messageId: string, userId: string, readAt: string) => void) => () => void
+  subscribeToUserPresence: (onPresenceChange: (userId: string, online: boolean) => void) => () => void
 }
 
 export const useChatWebSocket = (): ChatWebSocketHook => {
@@ -100,6 +102,15 @@ export const useChatWebSocket = (): ChatWebSocketHook => {
     })
   }, [subscribe])
 
+  // Subscribe to user presence (online/offline)
+  const subscribeToUserPresence = useCallback((
+    onPresenceChange: (userId: string, online: boolean) => void
+  ) => {
+    return subscribe('user:online', (payload: UserOnlinePayload) => {
+      onPresenceChange(payload.userId, payload.online)
+    })
+  }, [subscribe])
+
   return {
     isConnected,
     sendChatMessage,
@@ -109,5 +120,6 @@ export const useChatWebSocket = (): ChatWebSocketHook => {
     subscribeToNewChats,
     subscribeToTyping,
     subscribeToReadReceipts,
+    subscribeToUserPresence,
   }
 }

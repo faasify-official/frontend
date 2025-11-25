@@ -5,12 +5,15 @@ import type { Chat } from '../types/chat'
 type Props = {
   chat: Chat
   currentUserId?: string
+  onlineUsers?: Set<string>
 }
 
-const ChatListItem = ({ chat, currentUserId }: Props) => {
-  // Get the other participant's name (the person you're chatting with)
+const ChatListItem = ({ chat, currentUserId, onlineUsers = new Set() }: Props) => {
+  // Get the other participant's name and ID (the person you're chatting with)
   const otherParticipantIndex = chat.participants.findIndex(id => id !== currentUserId)
   const otherParticipantName = chat.participantNames[otherParticipantIndex] || 'Unknown User'
+  const otherParticipantId = chat.participants[otherParticipantIndex]
+  const isOtherUserOnline = otherParticipantId ? onlineUsers.has(otherParticipantId) : false
 
   // Format the last message time
   const formatTime = (dateString: string) => {
@@ -49,15 +52,21 @@ const ChatListItem = ({ chat, currentUserId }: Props) => {
     >
       <div className="flex items-center gap-4 p-4">
         {/* Avatar/Icon */}
-        <div className={`flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${
-          hasUnread 
-            ? 'bg-gradient-to-br from-primary to-primary-dark' 
-            : 'bg-gradient-to-br from-slate-100 to-slate-200'
-        } transition-all duration-300`}>
-          <MessageCircle 
-            size={24} 
-            className={hasUnread ? 'text-white' : 'text-slate-400'}
-          />
+        <div className="relative flex-shrink-0">
+          <div className={`flex items-center justify-center h-12 w-12 rounded-full ${
+            hasUnread 
+              ? 'bg-gradient-to-br from-primary to-primary-dark' 
+              : 'bg-gradient-to-br from-slate-100 to-slate-200'
+          } transition-all duration-300`}>
+            <MessageCircle 
+              size={24} 
+              className={hasUnread ? 'text-white' : 'text-slate-400'}
+            />
+          </div>
+          {/* Online status indicator */}
+          {isOtherUserOnline && (
+            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-white" />
+          )}
         </div>
 
         {/* Chat Info */}

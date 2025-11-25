@@ -12,8 +12,9 @@ const ChatListPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const { user } = useAuth()
-  const { subscribeToNewChats, isConnected } = useChatWebSocket()
+  const { subscribeToNewChats, subscribeToUserPresence, isConnected } = useChatWebSocket()
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -58,6 +59,25 @@ const ChatListPage = () => {
 
     return unsubscribe
   }, [isConnected, subscribeToNewChats])
+
+  // Subscribe to user presence (online/offline) via WebSocket
+  useEffect(() => {
+    if (!isConnected) return
+
+    const unsubscribe = subscribeToUserPresence((userId: string, online: boolean) => {
+      setOnlineUsers((prev) => {
+        const updated = new Set(prev)
+        if (online) {
+          updated.add(userId)
+        } else {
+          updated.delete(userId)
+        }
+        return updated
+      })
+    })
+
+    return unsubscribe
+  }, [isConnected, subscribeToUserPresence])
 
   // Filter chats based on search query
   const filteredChats = useMemo(() => {
@@ -208,7 +228,7 @@ const ChatListPage = () => {
                     key={chat.id}
                     className={`animate-stagger-${(idx % 6) + 1}`}
                   >
-                    <ChatListItem chat={chat} currentUserId={user?.userId} />
+                    <ChatListItem chat={chat} currentUserId={user?.userId} onlineUsers={onlineUsers} />
                   </div>
                 ))}
               </div>
@@ -229,7 +249,7 @@ const ChatListPage = () => {
                     key={chat.id}
                     className={`animate-stagger-${((idx + unreadChats.length) % 6) + 1}`}
                   >
-                    <ChatListItem chat={chat} currentUserId={user?.userId} />
+                    <ChatListItem chat={chat} currentUserId={user?.userId} onlineUsers={onlineUsers} />
                   </div>
                 ))}
               </div>

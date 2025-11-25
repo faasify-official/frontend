@@ -12,7 +12,7 @@ const ChatPage = () => {
   const { chatId } = useParams<{ chatId: string }>()
   const { user } = useAuth()
   const { showToast } = useToast()
-  const { isConnected, sendChatMessage, subscribeToChat, markMessageAsRead, subscribeToReadReceipts, sendTypingIndicator, subscribeToTyping } = useChatWebSocket()
+  const { isConnected, sendChatMessage, subscribeToChat, markMessageAsRead, subscribeToReadReceipts, sendTypingIndicator, subscribeToTyping, subscribeToUserPresence } = useChatWebSocket()
 
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -21,6 +21,7 @@ const ChatPage = () => {
   const [messageText, setMessageText] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -149,6 +150,25 @@ const ChatPage = () => {
     return unsubscribe
   }, [chatId, isConnected, subscribeToTyping])
 
+  // Subscribe to user presence (online/offline) via WebSocket
+  useEffect(() => {
+    if (!isConnected) return
+
+    const unsubscribe = subscribeToUserPresence((userId: string, online: boolean) => {
+      setOnlineUsers((prev) => {
+        const updated = new Set(prev)
+        if (online) {
+          updated.add(userId)
+        } else {
+          updated.delete(userId)
+        }
+        return updated
+      })
+    })
+
+    return unsubscribe
+  }, [isConnected, subscribeToUserPresence])
+
   // Handle sending a message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -247,12 +267,18 @@ const ChatPage = () => {
     }
   }
 
-  // Get other participant's name
+  // Get other participant's name and ID
   const otherParticipantName = chat
     ? chat.participantNames.find(
         (_name, idx) => chat.participants[idx] !== user?.userId
       ) || 'User'
     : 'User'
+
+  const otherParticipantId = chat
+    ? chat.participants.find(id => id !== user?.userId)
+    : null
+
+  const isOtherUserOnline = otherParticipantId ? onlineUsers.has(otherParticipantId) : false
 
   if (isLoading) {
     return (
@@ -291,9 +317,22 @@ const ChatPage = () => {
               <ArrowLeft size={24} />
             </Link>
             <div>
-              <h1 className="text-lg font-semibold text-charcoal">
-                {otherParticipantName}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-semibold text-charcoal">
+                  {otherParticipantName}
+                </h1>
+                {isOtherUserOnline ? (
+                  <div className="flex items-center gap-1 text-xs text-green-600">
+                    <div className="h-2 w-2 rounded-full bg-green-600" />
+                    <span>Online</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <div className="h-2 w-2 rounded-full bg-slate-400" />
+                    <span>Offline</span>
+                  </div>
+                )}
+              </div>
               {chat.storeName && (
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   <Store size={12} />
