@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react'
 import Navbar from '@components/Navbar'
+import { useGlobalMessageNotifications } from '@hooks/useGlobalMessageNotifications'
 
 type Props = {
   children: ReactNode
 }
 
 const MainLayout = ({ children }: Props) => {
+  // Enable global message notifications
+  useGlobalMessageNotifications()
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <Navbar />
