@@ -19,6 +19,7 @@ const Navbar = () => {
     // Only show Profile and Purchases for authenticated users
     if (isAuthenticated) {
       items.push(
+        { label: 'Messages', to: '/chats' },
         { label: 'Profile', to: '/profile' }
       )
       // Show Purchases for buyers, Orders for sellers

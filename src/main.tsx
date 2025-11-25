@@ -17,9 +17,12 @@ import ProfilePage from '@pages/ProfilePage'
 import BoughtItemsPage from '@pages/BoughtItemsPage'
 import ReviewItemPage from '@pages/ReviewItemPage'
 import SellerOrdersPage from '@pages/SellerOrdersPage'
+import ChatListPage from '@pages/ChatListPage'
+import ChatPage from '@pages/ChatPage'
 import { AuthProvider } from '@context/AuthContext'
 import { ToastProvider } from '@context/ToastContext'
 import { CartProvider } from '@context/CartContext'
+import { WebSocketProvider } from '@context/WebSocketContext'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 
@@ -50,6 +53,8 @@ const router = createBrowserRouter([
       { path: 'profile', element: <ProfilePage /> },
       { path: 'purchases', element: <BoughtItemsPage /> },
       { path: 'orders', element: <SellerOrdersPage /> },
+      { path: 'chats', element: <ChatListPage /> },
+      { path: 'chat/:chatId', element: <ChatPage /> },
     ],
   },
 ])
@@ -58,9 +63,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
       <ToastProvider>
-        <CartProvider>
-          <RouterProvider router={router} />
-        </CartProvider>
+        <WebSocketProvider>
+          <CartProvider>
+            <RouterProvider router={router} />
+          </CartProvider>
+        </WebSocketProvider>
       </ToastProvider>
     </AuthProvider>
   </React.StrictMode>,
