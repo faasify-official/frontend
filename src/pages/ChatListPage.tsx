@@ -5,7 +5,7 @@ import ChatListItem from '@components/ChatListItem'
 import { apiGet } from '@utils/api'
 import { useAuth } from '@context/AuthContext'
 import { useChatWebSocket } from '@hooks/useChatWebSocket'
-import type { Chat } from '../types/chat'
+import type { Chat, Message } from '../types/chat'
 
 const ChatListPage = () => {
   const [chats, setChats] = useState<Chat[]>([])
@@ -14,7 +14,7 @@ const ChatListPage = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const { user } = useAuth()
-  const { subscribeToNewChats, subscribeToUserPresence, isConnected } = useChatWebSocket()
+  const { subscribeToNewChats, subscribeToUserPresence, subscribeToAllMessages, isConnected } = useChatWebSocket()
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -78,6 +78,33 @@ const ChatListPage = () => {
 
     return unsubscribe
   }, [isConnected, subscribeToUserPresence])
+
+  // Subscribe to all messages to update chat list in real-time
+  useEffect(() => {
+    if (!isConnected) return
+
+    const unsubscribe = subscribeToAllMessages((chatId: string, message: Message) => {
+      setChats((prev) => {
+        return prev.map((chat) => {
+          if (chat.id === chatId) {
+            // Update the chat with new last message
+            return {
+              ...chat,
+              lastMessage: message,
+              updatedAt: message.createdAt,
+              // Increment unread count if message is from other user
+              unreadCount: message.senderId !== user?.userId 
+                ? (chat.unreadCount || 0) + 1 
+                : chat.unreadCount,
+            }
+          }
+          return chat
+        })
+      })
+    })
+
+    return unsubscribe
+  }, [isConnected, subscribeToAllMessages, user?.userId])
 
   // Filter chats based on search query
   const filteredChats = useMemo(() => {

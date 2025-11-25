@@ -17,6 +17,7 @@ type ChatWebSocketHook = {
   markMessageAsRead: (chatId: string, messageId: string) => void
   sendTypingIndicator: (chatId: string, isTyping: boolean) => void
   subscribeToChat: (chatId: string, onMessage: (message: Message) => void) => () => void
+  subscribeToAllMessages: (onMessage: (chatId: string, message: Message) => void) => () => void
   subscribeToNewChats: (onNewChat: (chatId: string) => void) => () => void
   subscribeToTyping: (chatId: string, onTyping: (userId: string, userName: string, isTyping: boolean) => void) => () => void
   subscribeToReadReceipts: (chatId: string, onRead: (messageId: string, userId: string, readAt: string) => void) => () => void
@@ -71,6 +72,13 @@ export const useChatWebSocket = (): ChatWebSocketHook => {
     })
   }, [subscribe])
 
+  // Subscribe to all messages (for chat list updates)
+  const subscribeToAllMessages = useCallback((onMessage: (chatId: string, message: Message) => void) => {
+    return subscribe('chat:message', (payload: ChatMessageReceivedPayload) => {
+      onMessage(payload.chatId, payload.message)
+    })
+  }, [subscribe])
+
   // Subscribe to new chat notifications
   const subscribeToNewChats = useCallback((onNewChat: (chatId: string) => void) => {
     return subscribe('chat:new', (payload: ChatNewPayload) => {
@@ -117,6 +125,7 @@ export const useChatWebSocket = (): ChatWebSocketHook => {
     markMessageAsRead,
     sendTypingIndicator,
     subscribeToChat,
+    subscribeToAllMessages,
     subscribeToNewChats,
     subscribeToTyping,
     subscribeToReadReceipts,
