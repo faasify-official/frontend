@@ -12,7 +12,7 @@ const ChatPage = () => {
   const { chatId } = useParams<{ chatId: string }>()
   const { user } = useAuth()
   const { showToast } = useToast()
-  const { isConnected, sendChatMessage, subscribeToChat, markMessageAsRead, subscribeToReadReceipts } = useChatWebSocket()
+  const { isConnected, sendChatMessage, subscribeToChat, markMessageAsRead, subscribeToReadReceipts, sendTypingIndicator, subscribeToTyping } = useChatWebSocket()
 
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -20,9 +20,11 @@ const ChatPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [messageText, setMessageText] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const typingTimeoutRef = useRef<number | null>(null)
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -53,6 +55,7 @@ const ChatPage = () => {
 
         setChat(chatResponse.chat)
         const fetchedMessages = messagesResponse.messages || []
+        console.log(fetchedMessages.map((m)=>  m.createdAt))
         setMessages(fetchedMessages)
 
         // Mark all unread messages from other participants as read
@@ -82,9 +85,23 @@ const ChatPage = () => {
 
     const unsubscribe = subscribeToChat(chatId, (newMessage: Message) => {
       setMessages((prev) => {
-        // Avoid duplicates - check if message already exists
-        const exists = prev.some(msg => msg.id === newMessage.id)
+        // Check if this real message already exists (by real ID)
+        const exists = prev.some(msg => msg.id === newMessage.id && !msg.id.startsWith('temp-'))
         if (exists) return prev
+        
+        // If this is our own message coming back from server, remove the temp version
+        if (newMessage.senderId === user?.userId) {
+          // Find and remove temp message with matching content and approximate time
+          const withoutTemp = prev.filter(msg => {
+            if (!msg.id.startsWith('temp-')) return true
+            if (msg.senderId !== user?.userId) return true
+            // Remove temp if content matches (it's likely the same message)
+            return msg.content !== newMessage.content
+          })
+          return [...withoutTemp, newMessage]
+        }
+        
+        // Message from another user - just add it
         return [...prev, newMessage]
       })
 
@@ -113,6 +130,25 @@ const ChatPage = () => {
     return unsubscribe
   }, [chatId, isConnected, subscribeToReadReceipts])
 
+  // Subscribe to typing indicators via WebSocket
+  useEffect(() => {
+    if (!chatId || !isConnected) return
+
+    const unsubscribe = subscribeToTyping(chatId, (userId: string, _userName: string, isTyping: boolean) => {
+      setTypingUsers((prev) => {
+        const updated = new Set(prev)
+        if (isTyping) {
+          updated.add(userId)
+        } else {
+          updated.delete(userId)
+        }
+        return updated
+      })
+    })
+
+    return unsubscribe
+  }, [chatId, isConnected, subscribeToTyping])
+
   // Handle sending a message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -132,6 +168,14 @@ const ChatPage = () => {
     setMessages((prev) => [...prev, tempMessage])
     const messageContent = messageText.trim()
     setMessageText('')
+
+    // Stop typing indicator when sending
+    if (chatId && isConnected) {
+      sendTypingIndicator(chatId, false)
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
     
     setIsSending(true)
     try {
@@ -140,10 +184,7 @@ const ChatPage = () => {
         sendChatMessage(chatId, messageContent)
         
         // The actual message will come back via WebSocket subscription
-        // Remove temp message after a short delay (it will be replaced by real one)
-        setTimeout(() => {
-          setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id))
-        }, 100)
+        // and replace the temp message automatically
       } else {
         // Fallback to REST API if WebSocket not connected
         const response = await apiPost<{ message: Message }>(`/chats/${chatId}/messages`, {
@@ -172,11 +213,30 @@ const ChatPage = () => {
 
   // Handle textarea auto-resize
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessageText(e.target.value)
+    const value = e.target.value
+    setMessageText(value)
     
     // Auto-resize textarea
     e.target.style.height = 'auto'
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
+
+    // Send typing indicator
+    if (chatId && isConnected) {
+      // Send typing start
+      if (value.length > 0) {
+        sendTypingIndicator(chatId, true)
+      }
+
+      // Clear previous timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+
+      // Auto-send stop after 3 seconds of no typing
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingIndicator(chatId, false)
+      }, 3000)
+    }
   }
 
   // Handle Enter key to send
@@ -282,6 +342,16 @@ const ChatPage = () => {
                 showSenderName={false}
               />
             ))
+          )}
+          {typingUsers.size > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 text-sm text-slate-500">
+              <div className="flex gap-1">
+                <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span>{otherParticipantName} is typing...</span>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
