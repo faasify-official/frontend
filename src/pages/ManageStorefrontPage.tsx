@@ -18,6 +18,7 @@ const ManageStorefrontPage = () => {
   const [isUpdatingItem, setIsUpdatingItem] = useState(false)
   const [isDeletingItem, setIsDeletingItem] = useState<string | null>(null)
   const [itemsError, setItemsError] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const navigate = useNavigate()
 
   // Form state for adding/editing item
@@ -81,11 +82,17 @@ const ManageStorefrontPage = () => {
     e.preventDefault()
     if (!selectedStorefront) return
 
+    // Prevent submission if image is still uploading
+    if (isUploadingImage) {
+      setItemsError('Please wait for image upload to complete')
+      return
+    }
+
     setIsAddingItem(true)
     setItemsError(null)
 
     try {
-      const response = await apiPost<{ item: Product; message: string }>('/listings', {
+      const payload = {
         name: itemName,
         description: itemDescription,
         price: parseFloat(itemPrice),
@@ -93,10 +100,14 @@ const ManageStorefrontPage = () => {
         image: itemImage || '',
         quantity: itemQuantity ? parseInt(itemQuantity, 10) : 0,
         storeId: selectedStorefront.storeId,
-      })
+      }
+      
+      await apiPost<{ item: Product; message: string }>('/listings', payload)
 
-      // Add the new item to the list
-      setStorefrontItems((prevItems) => [...prevItems, response.item])
+      // Refresh items list to get the latest data from the database
+      if (selectedStorefront) {
+        await fetchItems(selectedStorefront.storeId)
+      }
       resetForm()
     } catch (err) {
       console.error('Error adding item:', err)
@@ -104,7 +115,7 @@ const ManageStorefrontPage = () => {
     } finally {
       setIsAddingItem(false)
     }
-  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemImage, itemQuantity, resetForm])
+  }, [selectedStorefront, itemName, itemDescription, itemPrice, itemImage, itemQuantity, resetForm, isUploadingImage])
 
   const handleEditItem = useCallback((item: Product) => {
     setEditingItem(item)
@@ -353,26 +364,91 @@ const ManageStorefrontPage = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-600">Image URL</label>
+                  <label className="text-sm font-medium text-slate-600">Upload Image</label>
                   <input
-                    type="url"
-                    value={itemImage}
-                    onChange={(e) => setItemImage(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                    
+                      setIsUploadingImage(true);
+                      setItemsError(null);
+                    
+                      try {
+                        // Upload file to backend (server-side upload to S3 - avoids CORS issues)
+                        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                        const token = localStorage.getItem('authTokens') 
+                          ? JSON.parse(localStorage.getItem('authTokens')!).idToken 
+                          : localStorage.getItem('authToken');
+                        
+                        const uploadResponse = await fetch(`${API_URL}/upload`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': file.type,
+                            ...(token && { Authorization: `Bearer ${token}` }),
+                          },
+                          body: file,
+                        });
+                    
+                        if (!uploadResponse.ok) {
+                          const errorData = await uploadResponse.json().catch(() => ({ error: uploadResponse.statusText }));
+                          console.error('Upload failed:', errorData);
+                          throw new Error(errorData.error || `Failed to upload image: ${uploadResponse.status} ${uploadResponse.statusText}`);
+                        }
+                    
+                        const result = await uploadResponse.json();
+                        // Backend now returns S3 URL as primary (since CloudFront has 403 issues)
+                        const imageUrl = result.imageUrl || result.s3Url;
+                        
+                        if (!imageUrl) {
+                          throw new Error('Server did not return image URL');
+                        }
+                        
+                        setItemImage(imageUrl);
+                      } catch (err) {
+                        console.error('Error uploading image:', err);
+                        setItemsError(err instanceof Error ? err.message : 'Failed to upload image');
+                        setItemImage(''); // Clear image on error
+                      } finally {
+                        setIsUploadingImage(false);
+                      }
+                    }}
+                    disabled={isUploadingImage}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                  {isUploadingImage && (
+                    <p className="text-sm text-slate-500">Uploading image...</p>
+                  )}
+                  {itemImage && (
+                    <div className="mt-2">
+                      <img
+                        src={itemImage}
+                        alt="Preview"
+                        className="h-32 w-32 object-cover rounded-xl border border-slate-200"
+                      />
+                      <p className="mt-1 text-xs text-green-600">✓ Image ready</p>
+                      <p className="mt-1 text-xs text-slate-400 break-all">{itemImage.substring(0, 60)}...</p>
+                    </div>
+                  )}
+                  {!itemImage && !isUploadingImage && (
+                    <p className="text-xs text-slate-400 mt-1">No image selected. Item will use default image.</p>
+                  )}
                 </div>
                 <button
                   type="submit"
                   className="btn-primary w-full"
-                  disabled={editingItem ? isUpdatingItem : isAddingItem}
+                  disabled={editingItem ? isUpdatingItem : isAddingItem || isUploadingImage}
                 >
-                  {editingItem
-                    ? isUpdatingItem
-                      ? 'Updating...'
-                      : 'Update Item'
-                    : isAddingItem
-                      ? 'Adding...'
-                      : 'Add Item'}
+                  {isUploadingImage
+                    ? 'Uploading Image...'
+                    : editingItem
+                      ? isUpdatingItem
+                        ? 'Updating...'
+                        : 'Update Item'
+                      : isAddingItem
+                        ? 'Adding...'
+                        : 'Add Item'}
                 </button>
               </form>
             )}
@@ -388,13 +464,64 @@ const ManageStorefrontPage = () => {
               </div>
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {storefrontItems.map((item) => (
+                {storefrontItems.map((item) => {
+                  // Clean and validate image URL from database
+                  const imageUrl = item.image?.trim() || '';
+                  const defaultImage = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80';
+                  
+                  // Check if we have a CloudFront/S3 URL
+                  const isCloudFrontUrl = imageUrl.includes('cloudfront.net');
+                  const isS3Url = imageUrl.includes('s3.amazonaws.com') || imageUrl.includes('.s3.');
+                  
+                  // Generate S3 URL from CloudFront URL if needed (for fallback)
+                  // Extract bucket name and region from CloudFront URL pattern
+                  // CloudFront URL format: https://d1h5mef0qbip35.cloudfront.net/items/xxx.jpg
+                  // S3 URL format: https://bucket-name.s3.region.amazonaws.com/items/xxx.jpg
+                  let s3FallbackUrl = null;
+                  if (isCloudFrontUrl && imageUrl.includes('/items/')) {
+                    // Extract the key from CloudFront URL
+                    const key = imageUrl.split('/items/')[1];
+                    // Try to construct S3 URL - you'll need to set these in your env or get from API
+                    // For now, we'll try a common pattern
+                    const s3BucketName = import.meta.env.VITE_S3_BUCKET;
+                    const awsRegion = import.meta.env.VITE_AWS_REGION;
+                    if (key && s3BucketName && awsRegion) {
+                      s3FallbackUrl = `https://${s3BucketName}.s3.${awsRegion}.amazonaws.com/items/${key}`;
+                    }
+                  }
+                  
+                  // Use CloudFront/S3 URL if available, otherwise use default
+                  const finalImageUrl = ((isCloudFrontUrl || isS3Url) && imageUrl.length > 0) ? imageUrl : defaultImage;
+                  
+                  return (
                   <div key={item.id} className="card flex flex-col gap-3">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="h-40 w-full rounded-xl object-cover"
-                    />
+                    <div className="relative h-40 w-full overflow-hidden rounded-xl bg-slate-100">
+                      <img
+                        key={`${item.id}-${imageUrl}`} // Force re-render when URL changes
+                        src={finalImageUrl}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          
+                          // Try S3 URL if CloudFront failed
+                          if (isCloudFrontUrl && s3FallbackUrl && target.src === imageUrl) {
+                            target.src = s3FallbackUrl;
+                            return;
+                          }
+                          
+                          // If S3 also failed or no S3 fallback, use default
+                          if ((isCloudFrontUrl || isS3Url) && !target.src.includes('unsplash.com')) {
+                            setTimeout(() => {
+                              if (!target.src.includes('unsplash.com')) {
+                                target.src = defaultImage;
+                              }
+                            }, 1000);
+                          }
+                        }}
+                      />
+                    </div>
                     <div>
                       <h3 className="font-semibold text-charcoal">{item.name}</h3>
                       <p className="mt-1 text-sm text-slate-500">{item.category}</p>
@@ -425,7 +552,8 @@ const ManageStorefrontPage = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
