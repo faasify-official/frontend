@@ -57,7 +57,8 @@ type Review = {
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function BoughtItemsPage() {
-    const { token, user } = useAuth();
+    // const { token, user } = useAuth();
+    const { user } = useAuth();
 
     const [items, setItems] = useState<BoughtItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -89,22 +90,27 @@ export default function BoughtItemsPage() {
                 setLoading(true);
                 setError(null);
 
-                const res = await fetch(`${API_BASE_URL}/orders`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
-                    credentials: "include",
-                });
+                // const res = await fetch(`${API_BASE_URL}/orders`, {
+                //     method: "GET",
+                //     headers: {
+                //         "Content-Type": "application/json",
+                //         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                //     },
+                //     credentials: "include",
+                // });
 
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    console.error("Failed to fetch orders:", body);
-                    throw new Error(body.message || "Failed to load bought items.");
-                }
+                // if (!res.ok) {
+                //     const body = await res.json().catch(() => ({}));
+                //     console.error("Failed to fetch orders:", body);
+                //     throw new Error(body.message || "Failed to load bought items.");
+                // }
 
-                const data = await res.json();
+                // const data = await res.json();
+                // const orders: OrderFromAPI[] = data.orders ?? [];
+
+                // const flattened = flattenOrders(orders);
+                // Use shared API helper – it already attaches Authorization header
+                const data = await apiGet<{ orders: OrderFromAPI[] }>("/orders");
                 const orders: OrderFromAPI[] = data.orders ?? [];
 
                 const flattened = flattenOrders(orders);
@@ -145,14 +151,15 @@ export default function BoughtItemsPage() {
             }
         };
 
-        if (token) {
-            fetchBoughtItems();
-        } else {
-            setLoading(false);
-            setItems([]);
-        }
+        // if (token) {
+        //     fetchBoughtItems();
+        // } else {
+        //     setLoading(false);
+        //     setItems([]);
+        // }
 
-    }, [token, user?.userId]);
+    // }, [token, user?.userId]);
+    }, [user?.userId]);
 
     const handleReviewClick = (item: BoughtItem) => {
         if (!item.productId) {
