@@ -95,7 +95,7 @@ export default function BoughtItemsPage() {
                         "Content-Type": "application/json",
                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     },
-                    credentials: "include",
+                    credentials: "omit",
                 });
 
                 if (!res.ok) {
