@@ -365,7 +365,7 @@ const ManageStorefrontPage = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-600">Upload Image</label>
-                  <input
+                  {/* <input
                     type="file"
                     accept="image/*"
                     onChange={async (e) => {
@@ -405,6 +405,66 @@ const ManageStorefrontPage = () => {
                           throw new Error('Server did not return image URL');
                         }
                         
+                        setItemImage(imageUrl);
+                      } catch (err) {
+                        console.error('Error uploading image:', err);
+                        setItemsError(err instanceof Error ? err.message : 'Failed to upload image');
+                        setItemImage(''); // Clear image on error
+                      } finally {
+                        setIsUploadingImage(false);
+                      }
+                    }}
+                    disabled={isUploadingImage}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  /> */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      setIsUploadingImage(true);
+                      setItemsError(null);
+
+                      try {
+                        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+                        const token = localStorage.getItem('authTokens')
+                          ? JSON.parse(localStorage.getItem('authTokens')!).idToken
+                          : localStorage.getItem('authToken');
+
+                        // 🔥 Use FormData and field name "image"
+                        const formData = new FormData();
+                        formData.append('image', file); // MUST match upload.single('image')
+
+                        const uploadResponse = await fetch(`${API_URL}/upload`, {
+                          method: 'POST',
+                          body: formData,
+                          headers: {
+                            ...(token && { Authorization: `Bearer ${token}` }),
+                            // ⚠️ Do NOT set Content-Type – browser will set multipart boundary
+                          },
+                        });
+
+                        if (!uploadResponse.ok) {
+                          const errorData = await uploadResponse
+                            .json()
+                            .catch(() => ({ error: uploadResponse.statusText }));
+                          console.error('Upload failed:', errorData);
+                          throw new Error(
+                            errorData.error ||
+                              `Failed to upload image: ${uploadResponse.status} ${uploadResponse.statusText}`,
+                          );
+                        }
+
+                        const result = await uploadResponse.json();
+                        const imageUrl = result.imageUrl || result.s3Url;
+
+                        if (!imageUrl) {
+                          throw new Error('Server did not return image URL');
+                        }
+
                         setItemImage(imageUrl);
                       } catch (err) {
                         console.error('Error uploading image:', err);
