@@ -58,6 +58,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function BoughtItemsPage() {
     const { token, user } = useAuth();
+    // const { user } = useAuth();
 
     const [items, setItems] = useState<BoughtItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -95,7 +96,7 @@ export default function BoughtItemsPage() {
                         "Content-Type": "application/json",
                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     },
-                    credentials: "omit",
+                    // credentials: "include",
                 });
 
                 if (!res.ok) {
@@ -108,6 +109,11 @@ export default function BoughtItemsPage() {
                 const orders: OrderFromAPI[] = data.orders ?? [];
 
                 const flattened = flattenOrders(orders);
+                // Use shared API helper – it already attaches Authorization header
+                // const data = await apiGet<{ orders: OrderFromAPI[] }>("/orders");
+                // const orders: OrderFromAPI[] = data.orders ?? [];
+
+                // const flattened = flattenOrders(orders);
                 
                 // Check if user has reviewed each product
                 if (user?.userId && flattened.length > 0) {
@@ -153,6 +159,7 @@ export default function BoughtItemsPage() {
         }
 
     }, [token, user?.userId]);
+    // }, [user?.userId]);
 
     const handleReviewClick = (item: BoughtItem) => {
         if (!item.productId) {
