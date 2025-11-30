@@ -12,6 +12,7 @@ import { useToast } from '@context/ToastContext'
 import type { Storefront } from '../types/storefront'
 import type { Product } from '../types/product'
 import type { Chat } from 'types/chat'
+import SubscriptionPreferencesModal from '@components/SubscriptionPreferencesModal'
 
 // Mock store IDs that should use mock data
 const MOCK_STORE_IDS = ['minimal-market', 'artisan-atelier', 'fresh-bites']
@@ -28,10 +29,28 @@ const StorefrontPage = () => {
     const { isBuyer } = useAuth()
     const { isSubscribed, isLoading: isSubscriptionLoading, isChecking, subscribe, unsubscribe } = useSubscription(storeId || '')
     const { showToast } = useToast()
+    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false)
 
-    const handleSubscribe = async () => {
+    // const handleSubscribe = async () => {
+    //     try {
+    //         await subscribe()
+    //         showToast('Successfully subscribed to storefront!', 'success')
+    //     } catch (error: any) {
+    //         showToast(error.message || 'Failed to subscribe', 'error')
+    //     }
+    // }
+    const handleOpenSubscriptionModal = () => {
+        setIsSubscriptionModalOpen(true)
+    }
+
+    const handleConfirmSubscription = async (preferences: {
+        notifyEmail: boolean
+        notifySms: boolean
+        phoneNumber?: string
+    }) => {
         try {
-            await subscribe()
+            await subscribe(preferences)
+            setIsSubscriptionModalOpen(false)
             showToast('Successfully subscribed to storefront!', 'success')
         } catch (error: any) {
             showToast(error.message || 'Failed to subscribe', 'error')
@@ -200,10 +219,16 @@ const StorefrontPage = () => {
                     {isBuyer && !isChecking && storeId && (
                         <div className="pt-4 flex flex-wrap gap-3">
                             <button
-                                onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
+                                // onClick={isSubscribed ? handleUnsubscribe : handleSubscribe}
+                                // disabled={isSubscriptionLoading}
+                                // className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all ${isSubscribed
+                                //         ? 'bg-white/20 text-white border-2 border-white/30 hover:bg-white/30 hover:border-white/50'
+                                //         : 'bg-white text-primary hover:bg-white/95'
+                                //     } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                onClick={isSubscribed ? handleUnsubscribe : handleOpenSubscriptionModal}
                                 disabled={isSubscriptionLoading}
                                 className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all ${isSubscribed
-                                        ? 'bg-white/20 text-white border-2 border-white/30 hover:bg-white/30 hover:border-white/50'
+                                        ? 'bg-white/20 text...'
                                         : 'bg-white text-primary hover:bg-white/95'
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
@@ -257,6 +282,14 @@ const StorefrontPage = () => {
                 isLoading={isMessageLoading}
                 sellerName={storefront.ownerName || storefront.owner}
                 storeName={storefront.name}
+            />
+
+            {/* Subscription Preferences Modal */}
+            <SubscriptionPreferencesModal
+                isOpen={isSubscriptionModalOpen}
+                onClose={() => setIsSubscriptionModalOpen(false)}
+                onConfirm={handleConfirmSubscription}
+                isLoading={isSubscriptionLoading}
             />
         </section>
     )
