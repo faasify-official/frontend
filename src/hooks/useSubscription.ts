@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 import { apiGet, apiPost } from '@utils/api'
 import { useAuth } from '@context/AuthContext'
 
+type SubscriptionPreferences = {
+  notifyEmail?: boolean
+  notifySms?: boolean
+  phoneNumber?: string
+}
+
 export const useSubscription = (storeId: string) => {
   const { user, isBuyer, isAuthenticated } = useAuth()
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -35,12 +41,30 @@ export const useSubscription = (storeId: string) => {
     checkSubscription()
   }, [storeId, isAuthenticated, isBuyer, user?.email])
 
-  const subscribe = async () => {
+  // const subscribe = async () => {
+  //   if (!isAuthenticated || !isBuyer) return
+
+  //   setIsLoading(true)
+  //   try {
+  //     await apiPost('/subscriptions/subscribe', { storeId })
+  //     setIsSubscribed(true)
+  //     return true
+  //   } catch (error: any) {
+  //     throw new Error(error.message || 'Failed to subscribe')
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
+  const subscribe = async (preferences?: SubscriptionPreferences) => {
     if (!isAuthenticated || !isBuyer) return
 
     setIsLoading(true)
     try {
-      await apiPost('/subscriptions/subscribe', { storeId })
+      // preferences is optional – if not provided, backend defaults to email only
+      await apiPost('/subscriptions/subscribe', {
+        storeId,
+        ...preferences,
+      })
       setIsSubscribed(true)
       return true
     } catch (error: any) {
