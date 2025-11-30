@@ -143,7 +143,7 @@ const CheckoutPage = () => {
         }
 
         // Clear cart and redirect
-        clearCart()
+        await clearCart()
         navigate('/cart', { state: { orderPlaced: true } })
       } else {
         showToast(`Payment status: ${paymentIntent?.status}`, 'info')

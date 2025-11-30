@@ -149,14 +149,14 @@ export const CartProvider = ({ children }: Props) => {
       }
 
       try {
-        const cart = await sendCartRequest<CartApiResponse>('/cart', { method: 'GET' })
+        const cart = await sendCartRequest<CartApiResponse>('/cart/items', { method: 'GET' })
         if (!cancelled) {
           dispatch({ type: 'SET_CART', payload: mapServerItemsToCart(cart.items) })
         }
       } catch (error) {
         console.error('Unable to load cart from backend:', error)
         if (!cancelled) {
-          showToast('Unable to load your saved cart. Using local cart until we can sync.', 'error')
+          showToast('Unable to load your saved cart right now.', 'error')
         }
       }
     }
@@ -171,6 +171,7 @@ export const CartProvider = ({ children }: Props) => {
     const total = state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
     const cartCount = state.items.reduce((sum, item) => sum + item.quantity, 0)
     const shouldSyncWithBackend = isAuthenticated && !!token
+    const requireAuthMessage = 'Please log in to manage your cart.'
 
     return {
       cartItems: state.items,
@@ -188,55 +189,44 @@ export const CartProvider = ({ children }: Props) => {
           return
         }
 
-        // If we cannot sync (not logged in), keep behavior purely local
         if (!shouldSyncWithBackend) {
-          dispatch({ type: 'ADD', payload: product })
-          showToast(existingItem ? `${product.name} quantity updated in cart!` : `${product.name} added to cart successfully!`, 'success')
-          return
+          showToast(requireAuthMessage, 'error')
+          throw new Error(requireAuthMessage)
         }
 
         try {
-          const cart = await sendCartRequest<CartApiResponse>('/cart/item', {
+          const cart = await sendCartRequest<CartApiResponse>('/cart/items', {
             method: 'POST',
             body: JSON.stringify({
               itemId: product.id,
               quantity: requestedQuantity,
-              name: product.name,
-              price: product.price,
-              image: product.image,
-              category: product.category,
-              description: product.description,
-              averageRating: product.averageRating,
-              storeId: product.storeId,
-              availableQuantity: product.quantity,
             }),
           })
           dispatch({ type: 'SET_CART', payload: mapServerItemsToCart(cart.items) })
           showToast(existingItem ? `${product.name} quantity updated in cart!` : `${product.name} added to cart successfully!`, 'success')
         } catch (error) {
           console.error('Error syncing add to cart:', error)
-          dispatch({ type: 'ADD', payload: product })
-          showToast('Added locally but could not sync to server yet.', 'error')
+          const message = error instanceof Error ? error.message : 'Unable to add item to cart'
+          showToast(message, 'error')
+          throw error
         }
       },
       removeFromCart: async (productId: string) => {
-        const localRemove = () => dispatch({ type: 'REMOVE', payload: productId })
-
         if (!shouldSyncWithBackend) {
-          localRemove()
-          return
+          showToast(requireAuthMessage, 'error')
+          throw new Error(requireAuthMessage)
         }
 
         try {
-          const cart = await sendCartRequest<CartApiResponse>('/cart/item', {
+          const cart = await sendCartRequest<CartApiResponse>(`/cart/items/${productId}`, {
             method: 'DELETE',
-            body: JSON.stringify({ itemId: productId }),
           })
           dispatch({ type: 'SET_CART', payload: mapServerItemsToCart(cart.items) })
         } catch (error) {
           console.error('Error syncing remove from cart:', error)
-          localRemove()
-          showToast('Removed locally but could not sync to server yet.', 'error')
+          const message = error instanceof Error ? error.message : 'Unable to remove item from cart'
+          showToast(message, 'error')
+          throw error
         }
       },
       updateQuantity: async (productId: string, quantity: number) => {
@@ -252,38 +242,38 @@ export const CartProvider = ({ children }: Props) => {
           return
         }
 
-        const localUpdate = () => dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } })
-
         if (!shouldSyncWithBackend) {
-          localUpdate()
-          return
+          showToast(requireAuthMessage, 'error')
+          throw new Error(requireAuthMessage)
         }
 
         try {
-          const cart = await sendCartRequest<CartApiResponse>('/cart/item', {
+          const cart = await sendCartRequest<CartApiResponse>(`/cart/items/${productId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ itemId: productId, quantity }),
+            body: JSON.stringify({ quantity }),
           })
           dispatch({ type: 'SET_CART', payload: mapServerItemsToCart(cart.items) })
         } catch (error) {
           console.error('Error syncing quantity update:', error)
-          localUpdate()
-          showToast('Updated locally but could not sync to server yet.', 'error')
+          const message = error instanceof Error ? error.message : 'Unable to update quantity right now'
+          showToast(message, 'error')
+          throw error
         }
       },
       clearCart: async () => {
         if (!shouldSyncWithBackend) {
-          dispatch({ type: 'CLEAR' })
-          return
+          showToast(requireAuthMessage, 'error')
+          throw new Error(requireAuthMessage)
         }
 
         try {
-          const cart = await sendCartRequest<CartApiResponse>('/cart', { method: 'DELETE' })
+          const cart = await sendCartRequest<CartApiResponse>('/cart/items', { method: 'DELETE' })
           dispatch({ type: 'SET_CART', payload: mapServerItemsToCart(cart.items) })
         } catch (error) {
           console.error('Error syncing clear cart:', error)
-          dispatch({ type: 'CLEAR' })
-          showToast('Cleared locally but could not sync to server yet.', 'error')
+          const message = error instanceof Error ? error.message : 'Unable to clear cart right now'
+          showToast(message, 'error')
+          throw error
         }
       },
       cartCount,

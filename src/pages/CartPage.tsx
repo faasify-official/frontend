@@ -31,11 +31,46 @@ const CartPage = () => {
     )
   }
 
-  const handleQuantityChange = (productId: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeFromCart(productId)
-    } else {
-      updateQuantity(productId, newQuantity)
+  const handleQuantityChange = async (productId: string, newQuantity: number) => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      if (newQuantity < 1) {
+        await removeFromCart(productId)
+      } else {
+        await updateQuantity(productId, newQuantity)
+      }
+    } catch (error) {
+      console.error('Unable to change cart quantity:', error)
+    }
+  }
+
+  const handleRemove = async (productId: string) => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      await removeFromCart(productId)
+    } catch (error) {
+      console.error('Unable to remove item from cart:', error)
+    }
+  }
+
+  const handleClearCart = async () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      await clearCart()
+    } catch (error) {
+      console.error('Unable to clear cart:', error)
     }
   }
 
@@ -59,7 +94,7 @@ const CartPage = () => {
           </p>
         </div>
         {cartItems.length > 0 && (
-          <button onClick={clearCart} className="btn-outline hover:text-red-500 hover:border-red-300 transition-colors">
+          <button onClick={handleClearCart} className="btn-outline hover:text-red-500 hover:border-red-300 transition-colors">
             Clear Cart
           </button>
         )}
@@ -140,7 +175,7 @@ const CartPage = () => {
                       </span>
                     )}
                     <button
-                      onClick={() => removeFromCart(item.product.id)}
+                      onClick={() => handleRemove(item.product.id)}
                       className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
                       aria-label="Remove item"
                     >

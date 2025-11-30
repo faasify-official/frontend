@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart } from 'lucide-react'
 import type { Product } from '../types/product'
 import { useCart } from '@hooks/useCart'
@@ -10,23 +10,52 @@ type Props = {
 
 const ProductCard = ({ product }: Props) => {
   const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart()
-  const { isSeller } = useAuth()
+  const { isSeller, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const cartItem = cartItems.find((item) => item.product.id === product.id)
   const quantity = cartItem?.quantity || 0
 
-  const handleQuantityChange = (newQuantity: number) => {
+  const handleQuantityChange = async (newQuantity: number) => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
     if (newQuantity < 1) {
-      removeFromCart(product.id)
-    } else {
-      const availableQuantity = product.quantity ?? Infinity
-      if (availableQuantity < newQuantity) {
-        return // Error will be shown by updateQuantity
+      try {
+        await removeFromCart(product.id)
+      } catch (error) {
+        console.error('Failed to remove item from cart:', error)
       }
+      return
+    }
+
+    const availableQuantity = product.quantity ?? Infinity
+    if (availableQuantity < newQuantity) {
+      return
+    }
+
+    try {
       if (quantity === 0) {
-        addToCart(product)
+        await addToCart(product)
       } else {
-        updateQuantity(product.id, newQuantity)
+        await updateQuantity(product.id, newQuantity)
       }
+    } catch (error) {
+      console.error('Failed to update cart quantity:', error)
+    }
+  }
+
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      await addToCart(product)
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
     }
   }
 
@@ -102,10 +131,7 @@ const ProductCard = ({ product }: Props) => {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => addToCart(product)}
-                  className="btn-primary flex-1 text-sm font-medium"
-                >
+                <button onClick={handleAddToCart} className="btn-primary flex-1 text-sm font-medium">
                   Add to Cart
                 </button>
               )}

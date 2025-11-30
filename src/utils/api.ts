@@ -82,7 +82,11 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: response.statusText }))
-    throw new Error(errorData.error || `API request failed: ${response.status} ${response.statusText}`)
+    const error = new Error(
+      errorData.error || `API request failed: ${response.status} ${response.statusText}`
+    ) as Error & { status?: number }
+    error.status = response.status
+    throw error
   }
 
   return response.json()

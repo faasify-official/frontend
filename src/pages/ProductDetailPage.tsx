@@ -24,7 +24,7 @@ const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart()
-  const { isSeller } = useAuth()
+  const { isSeller, isAuthenticated } = useAuth()
 
   const [product, setProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -88,20 +88,50 @@ const ProductDetailPage = () => {
     }
   }, [id, fetchProduct])
 
-  const handleQuantityChange = (newQuantity: number) => {
+  const ensureAuthenticated = () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return false
+    }
+    return true
+  }
+
+  const handleQuantityChange = async (newQuantity: number) => {
     if (!product) return
+    if (!ensureAuthenticated()) return
     if (newQuantity < 1) {
-      removeFromCart(product.id)
-    } else {
-      const availableQuantity = product.quantity ?? Infinity
-      if (availableQuantity < newQuantity) {
-        return // Error will be shown by updateQuantity
+      try {
+        await removeFromCart(product.id)
+      } catch (error) {
+        console.error('Failed to remove item from cart:', error)
       }
+      return
+    }
+
+    const availableQuantity = product.quantity ?? Infinity
+    if (availableQuantity < newQuantity) {
+      return
+    }
+
+    try {
       if (quantity === 0) {
-        addToCart(product)
+        await addToCart(product)
       } else {
-        updateQuantity(product.id, newQuantity)
+        await updateQuantity(product.id, newQuantity)
       }
+    } catch (error) {
+      console.error('Failed to update cart quantity:', error)
+    }
+  }
+
+  const handleAddToCart = async () => {
+    if (!product) return
+    if (!ensureAuthenticated()) return
+
+    try {
+      await addToCart(product)
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
     }
   }
 
@@ -240,7 +270,7 @@ const ProductDetailPage = () => {
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => addToCart(product)} className="btn-primary flex-1 animate-button-hover">
+                    <button onClick={handleAddToCart} className="btn-primary flex-1 animate-button-hover">
                       <ShoppingCart size={20} />
                       Add to Cart
                     </button>
